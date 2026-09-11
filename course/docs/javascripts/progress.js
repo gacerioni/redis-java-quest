@@ -99,15 +99,8 @@
   }
 
   function renderLessonLists(state) {
-    document.querySelectorAll(".quest-lessons[data-course]").forEach(function (list) {
-      var cid = list.getAttribute("data-course");
-      list.innerHTML = "";
-      Q.lessons.filter(function (l) { return l.course === cid; }).forEach(function (l) {
-        var li = document.createElement("li");
-        if (state.done[l.id]) li.classList.add("done");
-        li.innerHTML = '<span class="mark"></span><span class="num">' + l.id + '</span><a href="' + urlOf(l.url) + '">' + l.title + '</a><span class="min">' + l.minutes + " min</span>";
-        list.appendChild(li);
-      });
+    document.querySelectorAll(".quest-lessons li[data-lesson]").forEach(function (li) {
+      li.classList.toggle("done", !!state.done[li.getAttribute("data-lesson")]);
     });
   }
 

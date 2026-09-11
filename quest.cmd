@@ -8,6 +8,6 @@ if exist .env (
 )
 if not exist target\quest.jar (
   echo [quest] building target\quest.jar ...
-  call mvn -q -B -DskipTests package
+  if exist mvnw.cmd (call mvnw.cmd -q -B -DskipTests package) else (call mvn -q -B -DskipTests package)
 )
 java -jar target\quest.jar %*

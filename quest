@@ -24,6 +24,6 @@ needs_build() {
 }
 if needs_build; then
   echo "[quest] building target/quest.jar (first run takes a minute)..."
-  mvn -q -B -DskipTests package
+  if [ -x ./mvnw ]; then ./mvnw -q -B -DskipTests package; else mvn -q -B -DskipTests package; fi
 fi
 exec java -jar "$JAR" "$@"

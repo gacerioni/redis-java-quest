@@ -8,3 +8,4 @@ course/site/
 .DS_Store
 __pycache__/
 .dev/
+.claude/

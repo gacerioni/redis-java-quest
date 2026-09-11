@@ -1,0 +1,72 @@
+# Redis Java Quest
+
+A self-paced Redis course for Java developers, with **Jedis** and **Lettuce** side by side.
+You build the server of a fictional MMORPG, **Ember Realm**, against your own Redis (Redis Cloud free tier or Docker),
+one short lesson at a time: cache, sessions, queues, events, search, and production practices.
+
+- Course site (PT-BR): https://redisjava.platformengineer.io/
+- 5 courses, 24 lessons, every lesson runnable with both clients and verified with an automatic check.
+- Code and comments in English, lesson prose and console output in Brazilian Portuguese (the audience).
+
+## Quick start
+
+Requirements: Java 21+, Git. Maven is optional (`./mvnw` downloads it).
+
+```bash
+git clone https://github.com/gacerioni/redis-java-quest.git
+cd redis-java-quest
+cp .env.example .env            # paste your Redis URL (redis://default:PASSWORD@host:port)
+./quest doctor                  # first run builds the jar
+./quest seed                    # loads the Ember Realm world under your key prefix
+./quest run 100-02 jedis
+./quest run 100-02 lettuce
+./quest check 100-02
+```
+
+No Redis yet? `docker compose up -d` starts Redis 8 (all modules) on `localhost:6379` and Redis Insight on `http://localhost:5540`.
+The local Redis is configured with `maxclients 30` on purpose to mirror the Redis Cloud free plan (lesson 102-04 depends on it).
+
+Windows: use `quest.cmd` instead of `./quest`.
+
+## Layout
+
+| Path | What |
+|---|---|
+| `src/main/java/com/emberrealm/quest/core` | Tiny framework: `Env` (.env, URL, prefix), `Clients` (Jedis and Lettuce factories), `Console`, `Lab`, `Check`, `Ctx`, CLI `Main` |
+| `src/main/java/com/emberrealm/quest/world` | Ember Realm dataset loaders and the `Seed` |
+| `src/main/java/com/emberrealm/quest/lessons/l<id>` | One package per lesson: `JedisLab`, `LettuceLab`, `LessonCheck` |
+| `src/main/resources/world` | Items (with 384-dim embeddings), players, zones, queries |
+| `course/` | MkDocs Material site (PT-BR) |
+| `scripts/smoke_all.sh` | The gauntlet: seed, run every lesson with both clients, check everything |
+| `scripts/gen_embeddings.py` | Regenerates the embeddings with a local Ollama (`all-minilm`) |
+
+## Lessons
+
+| Course | Lessons |
+|---|---|
+| Fundamentos (100) | Topologies (OSS, Cluster, Redis Cloud proxy), connect, Redis Insight, keys/TTL/SCAN, pipeline and MULTI |
+| Tipos (101) | String, Hash, List, Set, Sorted Set, Bloom |
+| Eventos (102) | Pub/Sub, Streams, consumer groups, blocking connections |
+| Busca (201) | JSON + FT.SEARCH, FT.AGGREGATE, FT.HYBRID, vector sets |
+| Produção (301) | Timeouts/pool/retry, client-side caching, TLS, smart client handoffs, Active-Active failover |
+
+## Testing
+
+```bash
+./mvnw -q test                                   # unit tests
+REDIS_URL=redis://localhost:6379 scripts/smoke_all.sh   # full gauntlet against a Redis
+```
+
+The gauntlet is the definition of done: every lesson runs with Jedis, runs with Lettuce, and its check passes.
+
+## Building the site
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r course/requirements.txt
+.venv/bin/mkdocs serve -f course/mkdocs.yml       # http://127.0.0.1:8000
+.venv/bin/mkdocs build -f course/mkdocs.yml --strict
+```
+
+## License
+
+MIT. Ember Realm is a fictional world created for this course.
