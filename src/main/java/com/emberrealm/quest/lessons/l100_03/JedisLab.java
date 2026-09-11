@@ -1,0 +1,66 @@
+package com.emberrealm.quest.lessons.l100_03;
+
+import com.emberrealm.quest.core.Clients;
+import com.emberrealm.quest.core.Ctx;
+import com.emberrealm.quest.core.Lab;
+import redis.clients.jedis.RedisClient;
+import redis.clients.jedis.params.ScanParams;
+import redis.clients.jedis.resps.ScanResult;
+
+import java.time.Instant;
+import java.util.Set;
+import java.util.TreeSet;
+
+/**
+ * 100-03 (Jedis): a guided tour of the seeded world, the same walk you take in the Redis Insight Browser.
+ * SCAN finds every key under the prefix, TYPE says what lives in each one, and a table groups them by entity.
+ */
+public final class JedisLab implements Lab {
+
+    @Override
+    public void run(Ctx ctx) {
+        String visited = ctx.k("tour", "visited");
+        String pattern = ctx.keys.pattern();
+        try (RedisClient jedis = Clients.jedis()) {
+            ctx.out.step("Apagando o marco da visita anterior (a lição pode rodar quantas vezes quiser)");
+            ctx.out.cmd("UNLINK " + visited);
+            jedis.unlink(visited);
+
+            ctx.out.step("Percorrendo o reino com SCAN, página por página");
+            ctx.out.cmd("SCAN 0 MATCH " + pattern + " COUNT 100");
+            Set<String> keys = new TreeSet<>();
+            ScanParams params = new ScanParams().match(pattern).count(100);
+            String cursor = ScanParams.SCAN_POINTER_START;
+            int pages = 0;
+            do {
+                ScanResult<String> page = jedis.scan(cursor, params);
+                keys.addAll(page.getResult());
+                cursor = page.getCursor();
+                pages++;
+            } while (!cursor.equals(ScanParams.SCAN_POINTER_START));
+            ctx.out.kv("chaves com o prefixo " + ctx.keys.prefix(), keys.size() + " (em " + pages + " página(s) de SCAN)");
+            if (!keys.contains(ctx.k("players"))) throw new IllegalStateException("Rode ./quest seed primeiro");
+
+            ctx.out.step("TYPE em cada chave: o que mora em cada canto do mapa");
+            ctx.out.cmd("TYPE " + ctx.k("item", "espada-de-brasa"));
+            ctx.out.kv("TYPE", jedis.type(ctx.k("item", "espada-de-brasa")));
+            Tour tour = new Tour(ctx.keys.prefix());
+            for (String key : keys) tour.add(key, jedis.type(key));
+            ctx.out.info("Agrupando pela entidade (o pedaço logo depois do prefixo), como a árvore do Browser faz:");
+            tour.print(ctx);
+            ctx.out.info("Itens são documentos JSON, personagens e zonas são hashes, conquistas são sets, o ranking é um sorted set.");
+            ctx.out.info("O índice GEO das zonas aparece como sorted set: por dentro, GEO é um zset com a posição codificada no score.");
+
+            ctx.out.step("Deixando um marco da visita");
+            String now = Instant.now().toString();
+            ctx.out.cmd("SET " + visited + " " + now);
+            ctx.out.kv("SET", jedis.set(visited, now));
+            ctx.out.info("Abra o Redis Insight, filtre por " + pattern + " no Browser e procure " + visited + ".");
+
+            ctx.done("keys", String.valueOf(tour.total()),
+                    "items", String.valueOf(tour.count("item", "ReJSON-RL")),
+                    "players", String.valueOf(tour.count("player", "hash")),
+                    "types", String.valueOf(tour.distinctTypes()));
+        }
+    }
+}
