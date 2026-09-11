@@ -1,5 +1,5 @@
 ---
-title: 101: Tipos de dados
+title: "101: Tipos de dados"
 ---
 
 # 101: Tipos de dados
