@@ -1,0 +1,10 @@
+target/
+.venv/
+course/site/
+.env
+*.log
+.idea/
+*.iml
+.DS_Store
+__pycache__/
+.dev/

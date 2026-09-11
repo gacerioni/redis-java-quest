@@ -1,0 +1,25 @@
+id;course;title
+100-01;Fundamentos;O mapa do mundo: OSS, Cluster e Redis Cloud
+100-02;Fundamentos;Conectar com Jedis e Lettuce
+100-03;Fundamentos;Redis Insight: enxergando o reino
+100-04;Fundamentos;Chaves, TTL e SCAN
+100-05;Fundamentos;Pipeline: cem comandos, uma viagem
+101-01;Tipos;String: sessao e cooldown de habilidade
+101-02;Tipos;Hash: a ficha do personagem
+101-03;Tipos;List: a fila da dungeon
+101-04;Tipos;Set: conquistas e inventario
+101-05;Tipos;Sorted Set: o ranking do servidor
+101-06;Tipos;Bloom: esse bau ja foi aberto?
+102-01;Eventos;Pub/Sub: o chat da zona
+102-02;Eventos;Streams: o diario de combate
+102-03;Eventos;Consumer groups: guildas processando o loot
+102-04;Eventos;Conexoes bloqueantes: 31 jogadores na fila
+201-01;Busca;JSON e FT.SEARCH: a casa de leiloes
+201-02;Busca;FT.AGGREGATE: a economia do reino
+201-03;Busca;FT.HYBRID: busca hibrida
+201-04;Busca;Vector sets: itens parecidos
+301-01;Producao;Timeouts, pool e retry
+301-02;Producao;Client-side caching
+301-03;Producao;TLS
+301-04;Producao;Smart client handoffs
+301-05;Producao;Active-Active e failover geografico

@@ -1,0 +1,8 @@
+[
+  {"id": "vila-de-brasa", "name": "Vila de Brasa", "levelMin": 1, "levelMax": 10, "danger": "baixo", "lat": -23.5505, "lon": -46.6333},
+  {"id": "floresta-de-cinzas", "name": "Floresta de Cinzas", "levelMin": 8, "levelMax": 20, "danger": "medio", "lat": -23.4210, "lon": -46.5020},
+  {"id": "pantano-sombrio", "name": "Pântano Sombrio", "levelMin": 18, "levelMax": 35, "danger": "alto", "lat": -23.7800, "lon": -46.9100},
+  {"id": "pico-gelido", "name": "Pico Gélido", "levelMin": 30, "levelMax": 50, "danger": "alto", "lat": -22.9500, "lon": -45.6000},
+  {"id": "ruinas-de-ashenmoor", "name": "Ruínas de Ashenmoor", "levelMin": 45, "levelMax": 60, "danger": "extremo", "lat": -24.1000, "lon": -47.3000},
+  {"id": "catacumbas-rubras", "name": "Catacumbas Rubras", "levelMin": 55, "levelMax": 70, "danger": "extremo", "lat": -23.2000, "lon": -47.9000}
+]

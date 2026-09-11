@@ -1,0 +1,48 @@
+# Redis local para quem prefere nao usar o Redis Cloud (ou esta sem internet).
+# Sobe Redis 8 (JSON, Search, TimeSeries, Bloom e vector sets inclusos) e o Redis Insight.
+#
+#   docker compose up -d
+#   REDIS_URL=redis://localhost:6379
+#   Redis Insight: http://localhost:5540
+#
+# maxclients 30 imita o limite de conexoes do plano free do Redis Cloud,
+# de proposito: a licao 102-04 depende disso.
+services:
+  redis:
+    image: redis:8
+    container_name: quest-redis
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxclients", "30"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  insight:
+    image: redis/redisinsight:latest
+    container_name: quest-insight
+    ports:
+      - "${INSIGHT_PORT:-5540}:5540"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # Licao 301-05 (failover geografico): dois "datacenters" locais.
+  #   docker compose --profile failover up -d
+  redis-east:
+    image: redis:8
+    container_name: quest-redis-east
+    profiles: ["failover"]
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "6391:6379"
+
+  redis-west:
+    image: redis:8
+    container_name: quest-redis-west
+    profiles: ["failover"]
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "6392:6379"
