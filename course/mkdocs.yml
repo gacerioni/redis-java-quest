@@ -1,0 +1,124 @@
+site_name: Redis Java Quest
+site_description: Redis para devs Java, com Jedis e Lettuce lado a lado. Aprenda fazendo, no Ember Realm.
+site_url: https://redisjava.platformengineer.io/
+copyright: Redis Java Quest. Conteúdo aberto, código MIT.
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  language: pt-BR
+  custom_dir: overrides
+  logo: assets/logo.svg
+  favicon: assets/logo.svg
+  font:
+    text: Inter
+    code: JetBrains Mono
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Modo escuro
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Modo claro
+  features:
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - navigation.tracking
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.tabs.link
+    - toc.follow
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: false
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+
+extra_css:
+  - stylesheets/quest.css
+extra_javascript:
+  - javascripts/lessons.js
+  - javascripts/progress.js
+  - javascripts/quiz.js
+
+extra:
+  generator: false
+
+nav:
+  - Início: index.md
+  - Comece aqui:
+      - comece-aqui/index.md
+      - Crie seu Redis Cloud: comece-aqui/redis-cloud.md
+      - Prepare a máquina: comece-aqui/maquina.md
+      - Rode a primeira lição: comece-aqui/primeira-licao.md
+  - Fundamentos:
+      - fundamentos/index.md
+      - 01 O mapa do mundo: fundamentos/01-mapa-do-mundo.md
+      - 02 Conectar com Jedis e Lettuce: fundamentos/02-conectar.md
+      - 03 Redis Insight: fundamentos/03-redis-insight.md
+      - 04 Chaves, TTL e SCAN: fundamentos/04-chaves-ttl-scan.md
+      - 05 Pipeline: fundamentos/05-pipeline.md
+      - Knowledge check: fundamentos/quiz.md
+  - 101 Tipos:
+      - 101-tipos/index.md
+      - 01 String: 101-tipos/01-string.md
+      - 02 Hash: 101-tipos/02-hash.md
+      - 03 List: 101-tipos/03-list.md
+      - 04 Set: 101-tipos/04-set.md
+      - 05 Sorted Set: 101-tipos/05-sorted-set.md
+      - 06 Bloom: 101-tipos/06-bloom.md
+      - Knowledge check: 101-tipos/quiz.md
+  - 102 Eventos:
+      - 102-eventos/index.md
+      - 01 Pub/Sub: 102-eventos/01-pubsub.md
+      - 02 Streams: 102-eventos/02-streams.md
+      - 03 Consumer groups: 102-eventos/03-consumer-groups.md
+      - 04 Conexões bloqueantes: 102-eventos/04-conexoes-bloqueantes.md
+      - Knowledge check: 102-eventos/quiz.md
+  - 201 Busca:
+      - 201-busca/index.md
+      - 01 JSON e FT.SEARCH: 201-busca/01-json-search.md
+      - 02 FT.AGGREGATE: 201-busca/02-aggregate.md
+      - 03 FT.HYBRID: 201-busca/03-hybrid.md
+      - 04 Vector sets: 201-busca/04-vector-sets.md
+      - Knowledge check: 201-busca/quiz.md
+  - 301 Produção:
+      - 301-producao/index.md
+      - 01 Timeouts, pool e retry: 301-producao/01-timeouts-pool-retry.md
+      - 02 Client-side caching: 301-producao/02-client-side-caching.md
+      - 03 TLS: 301-producao/03-tls.md
+      - 04 Smart client handoffs: 301-producao/04-smart-client-handoffs.md
+      - 05 Active-Active: 301-producao/05-active-active.md
+      - Knowledge check: 301-producao/quiz.md
+  - Referência:
+      - Comandos do quest: referencia/cli.md
+      - Jedis ou Lettuce?: referencia/jedis-vs-lettuce.md
+      - Limites do Redis Cloud free: referencia/free-tier.md

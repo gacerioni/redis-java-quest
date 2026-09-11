@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+
+{% block content %}
+  {{ super() }}
+  {% if page.meta.lesson %}
+  <div class="quest-complete" data-lesson="{{ page.meta.lesson }}" data-title="{{ page.meta.title }}"></div>
+  {% endif %}
+{% endblock %}
