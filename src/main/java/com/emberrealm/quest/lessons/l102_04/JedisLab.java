@@ -40,7 +40,7 @@ public final class JedisLab implements Lab {
     @Override
     public void run(Ctx ctx) throws Exception {
         int waiters = Waiters.count(ctx.out);
-        String queue = ctx.k("queue", "dungeon");
+        String queue = ctx.k("queue", "raid");
         String waiterName = ctx.keys.prefix() + "-waiter";
         try (RedisClient jedis = Clients.jedis()) {
             ctx.out.step("Fila limpa e uma foto das conexões antes de começar");

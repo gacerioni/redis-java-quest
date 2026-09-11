@@ -11,11 +11,11 @@ kind: lab
 
 ## Por que isso importa
 
-`BRPOP`, `XREADGROUP BLOCK` e `SUBSCRIBE` parecem gratuitos: o cliente espera e o Redis não gasta CPU. O custo está em outro lugar: enquanto espera, aquela conexão não serve para mais nada. Cinco jogadores na fila da dungeon são cinco conexões paradas. No Jedis são cinco conexões do pool a menos; no Lettuce, um `BRPOP` na conexão compartilhada para todos os comandos atrás dele. E no plano free do Redis Cloud o limite é 30 conexões: o 31º cliente recebe `ERR max number of clients reached`. Esta lição mostra tudo isso acontecendo e como dimensionar.
+`BRPOP`, `XREADGROUP BLOCK` e `SUBSCRIBE` parecem gratuitos: o cliente espera e o Redis não gasta CPU. O custo está em outro lugar: enquanto espera, aquela conexão não serve para mais nada. Cinco jogadores na fila da raid são cinco conexões paradas. No Jedis são cinco conexões do pool a menos; no Lettuce, um `BRPOP` na conexão compartilhada para todos os comandos atrás dele. E no plano free do Redis Cloud o limite é 30 conexões: o 31º cliente recebe `ERR max number of clients reached`. Esta lição mostra tudo isso acontecendo e como dimensionar.
 
 ## O que você vai fazer
 
-- Colocar 5 jogadores (`QUEST_WAITERS`) em `BRPOP {p}:queue:dungeon 3`, cada um na sua conexão, e ver `blocked_clients` e `CLIENT LIST` (`flags=b cmd=brpop`)
+- Colocar 5 jogadores (`QUEST_WAITERS`) em `BRPOP {p}:queue:raid 3`, cada um na sua conexão, e ver `blocked_clients` e `CLIENT LIST` (`flags=b cmd=brpop`)
 - Jedis: esgotar um pool do tamanho exato dos jogadores e ver um `PING` desistir em 500 ms
 - Lettuce: medir um `PING` preso atrás de um `BLPOP` na conexão compartilhada (cerca de 2000 ms) contra o mesmo `BLPOP` em conexão dedicada (menos de 1 ms)
 - Abrir a dungeon com um `RPUSH` e ver todos acordarem
@@ -105,7 +105,7 @@ sequenceDiagram
     participant C as Conexão TCP
     participant R as Redis
     participant T2 as Thread 2
-    T1->>C: BRPOP {p}:queue:dungeon 3
+    T1->>C: BRPOP {p}:queue:raid 3
     C->>R: BRPOP
     Note over R: fila vazia: cliente bloqueado (flags=b)
     T2->>C: PING (mesma conexão)

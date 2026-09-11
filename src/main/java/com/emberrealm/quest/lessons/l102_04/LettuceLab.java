@@ -35,7 +35,7 @@ public final class LettuceLab implements Lab {
     @Override
     public void run(Ctx ctx) throws Exception {
         int waiters = Waiters.count(ctx.out);
-        String queue = ctx.k("queue", "dungeon");
+        String queue = ctx.k("queue", "raid");
         String waiterName = ctx.keys.prefix() + "-waiter";
         try (StatefulRedisConnection<String, String> shared = Clients.lettuceConnection()) {
             RedisCommands<String, String> redis = shared.sync();

@@ -12,7 +12,7 @@ public final class LessonCheck implements Check {
 
     @Override
     public void run(Ctx ctx, Verdict v) {
-        String queue = ctx.k("queue", "dungeon");
+        String queue = ctx.k("queue", "raid");
         String waiterName = ctx.keys.prefix() + "-waiter";
         try (RedisClient jedis = Clients.jedis()) {
             long left = jedis.exists(queue) ? jedis.llen(queue) : 0;
