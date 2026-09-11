@@ -32,6 +32,7 @@ public final class Ctx {
     public void done(String... fieldValuePairs) {
         Map<String, String> fields = new LinkedHashMap<>();
         fields.put("client", client);
+        fields.put("ran_" + client, "1");
         fields.put("at", Instant.now().toString());
         for (int i = 0; i + 1 < fieldValuePairs.length; i += 2) {
             fields.put(fieldValuePairs[i], fieldValuePairs[i + 1]);
