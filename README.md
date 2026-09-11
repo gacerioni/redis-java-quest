@@ -70,3 +70,18 @@ python3 -m venv .venv && .venv/bin/pip install -r course/requirements.txt
 ## License
 
 MIT. Ember Realm is a fictional world created for this course.
+
+## Running a workshop on one shared Redis Cloud Pro database
+
+Give every student their own ACL user; the course derives the key prefix from the username, so nobody steps on
+anybody else's keys and nobody can flush the database.
+
+```bash
+export REDIS_CLOUD_API_KEY=...  REDIS_CLOUD_API_SECRET=...
+printf 'ana\nbruno\ncarla\n' > students.txt
+python3 scripts/cloud_acl_users.py --subscription <subId> --database <dbId> \
+    --endpoint <host:port> --students students.txt --out students-credentials.csv
+```
+
+Each student pastes their `redis_url` into `.env`. The default rule is `+@all` minus destructive and admin commands,
+keys restricted to `<name>:*`. Clean up after the workshop with `--delete`.

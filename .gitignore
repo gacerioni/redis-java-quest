@@ -9,3 +9,5 @@ course/site/
 __pycache__/
 .dev/
 .claude/
+students.txt
+students-credentials*.csv
