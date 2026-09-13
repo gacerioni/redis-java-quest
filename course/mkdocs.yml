@@ -1,6 +1,6 @@
 site_name: Redis Java Quest
 site_description: Redis para devs Java, com Jedis e Lettuce lado a lado. Aprenda fazendo, no Ember Realm.
-site_url: https://redisjava.platformengineer.io/
+site_url: https://platformengineer.io/redisjava/
 copyright: Redis Java Quest. Conteúdo aberto, código MIT.
 docs_dir: docs
 site_dir: site

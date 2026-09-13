@@ -4,7 +4,7 @@ A self-paced Redis course for Java developers, with **Jedis** and **Lettuce** si
 You build the server of a fictional MMORPG, **Ember Realm**, against your own Redis (Redis Cloud free tier or Docker),
 one short lesson at a time: cache, sessions, queues, events, search, and production practices.
 
-- Course site (PT-BR): https://redisjava.platformengineer.io/
+- Course site (PT-BR): https://platformengineer.io/redisjava/
 - 5 courses, 24 lessons, every lesson runnable with both clients and verified with an automatic check.
 - Code and comments in English, lesson prose and console output in Brazilian Portuguese (the audience).
 
@@ -62,12 +62,13 @@ REDIS_URL=redis://localhost:6379 scripts/smoke_all.sh   # full gauntlet against 
 The gauntlet is the definition of done: every lesson runs with Jedis, runs with Lettuce, and its check passes.
 `scripts/dod.sh` chains the text lint, the unit tests, the gauntlet and a strict site build in one command.
 
-## Building the site
+## Building and publishing the site
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r course/requirements.txt
 .venv/bin/mkdocs serve -f course/mkdocs.yml       # http://127.0.0.1:8000
 .venv/bin/mkdocs build -f course/mkdocs.yml --strict
+scripts/deploy_platformengineer.sh                # ships course/site to platformengineer.io/redisjava/
 ```
 
 ## License
