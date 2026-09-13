@@ -58,6 +58,7 @@ REDIS_URL=redis://localhost:6379 scripts/smoke_all.sh   # full gauntlet against 
 ```
 
 The gauntlet is the definition of done: every lesson runs with Jedis, runs with Lettuce, and its check passes.
+`scripts/dod.sh` chains the text lint, the unit tests, the gauntlet and a strict site build in one command.
 
 ## Building the site
 
