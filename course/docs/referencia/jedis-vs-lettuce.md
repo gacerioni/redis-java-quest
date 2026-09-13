@@ -14,7 +14,7 @@ Os dois são clients oficiais, mantidos pela Redis, com suporte a todos os tipos
 | Spring | Suportado | Padrão do Spring Data Redis e do Spring Boot |
 | Client-side caching | Sim (RESP3 + `CacheConfig`) | API `ClientSideCaching` marcada como legada a partir da 7.8 |
 | Smart client handoffs (manutenção do Redis Cloud) | Ainda não (8.0.1) | Sim, ligado por padrão em RESP3 (7.0+) |
-| Failover geográfico no client (Active-Active) | `MultiDbClient` com circuit breaker | Não tem cliente multi-endpoint; usar redirecionamento de endpoint do Redis Cloud |
+| Failover geográfico no client (Active-Active) | `MultiDbClient` com circuit breaker (Jedis 7+) | `MultiDbClient` em preview (7.7+); o Redis Cloud também redireciona endpoints do lado do servidor |
 | Search, JSON, Streams, vector sets, Bloom | Sim | Sim |
 | TimeSeries | Sim | Sem API nativa (comando customizado) |
 
@@ -22,7 +22,7 @@ Os dois são clients oficiais, mantidos pela Redis, com suporte a todos os tipos
 
 - **Aplicação Spring Boot**: fique com o Lettuce, que já vem. Aprenda a regra da conexão dedicada para comandos bloqueantes (lição 102-04).
 - **Serviço sem Spring, código direto, time que quer previsibilidade**: Jedis. Dimensione o pool pela concorrência real mais os comandos bloqueantes.
-- **Ativo-ativo entre regiões com failover no client**: Jedis hoje tem a peça pronta.
+- **Ativo-ativo entre regiões com failover no client**: Jedis tem a peça estável; no Lettuce ela ainda é preview.
 - **Manutenções do Redis Cloud sem soluço**: Lettuce hoje tem a peça pronta.
 
 O curso mostra as duas versões de cada lição justamente para você escolher com base no que viu rodando, não no que leu.
