@@ -8,6 +8,8 @@ one short lesson at a time: cache, sessions, queues, events, search, and product
 - 5 courses, 24 lessons, every lesson runnable with both clients and verified with an automatic check.
 - Code and comments in English, lesson prose and console output in Brazilian Portuguese (the audience).
 
+![Redis Java Quest landing page](docs/screens/landing-1280.png)
+
 ## Quick start
 
 Requirements: Java 21+, Git. Maven is optional (`./mvnw` downloads it).
