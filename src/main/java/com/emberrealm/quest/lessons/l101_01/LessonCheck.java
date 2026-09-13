@@ -48,6 +48,28 @@ public final class LessonCheck implements Check {
                         + marker.getOrDefault("session_ttl", "?") + " s");
             }
 
+            String healCooldown = ctx.k("cooldown", "kaelith", "heal");
+            String heals = ctx.k("heals", "kaelith");
+            Map<String, String> exercise = jedis.hgetAll(ctx.exerciseKey());
+            if (exercise.isEmpty()) {
+                v.fail("Sua vez: o seu castHeal ainda não rodou",
+                        "implemente castHeal em l101_01/JedisExercise.java (ou LettuceExercise.java) e rode: ./quest exercise 101-01 jedis");
+            } else {
+                String rawHeals = jedis.get(heals);
+                v.expect(parseLong(rawHeals) == 1,
+                        "Sua vez: de duas curas seguidas só a primeira contou (" + heals + " = " + JedisLab.orNil(rawHeals) + ")",
+                        "castHeal deve gravar o cooldown com NX e EX e só fazer INCR quando o SET devolver OK");
+                long healTtl = jedis.ttl(healCooldown);
+                if (healTtl >= 0 && healTtl <= JedisExercise.HEAL_COOLDOWN_SECONDS) {
+                    v.pass("Sua vez: o cooldown " + healCooldown + " existe, TTL " + healTtl + " s");
+                } else if (healTtl == -2 && "false".equals(exercise.get("second"))) {
+                    v.pass("Sua vez: o cooldown de " + JedisExercise.HEAL_COOLDOWN_SECONDS + " s já expirou; o exercício registrou a segunda cura recusada");
+                } else {
+                    v.fail("Sua vez: esperava " + healCooldown + " com TTL de até " + JedisExercise.HEAL_COOLDOWN_SECONDS + " s",
+                            "use SET " + healCooldown + " 1 NX EX " + JedisExercise.HEAL_COOLDOWN_SECONDS);
+                }
+            }
+
             boolean jedisRan = marker.containsKey("ran_jedis");
             boolean lettuceRan = marker.containsKey("ran_lettuce");
             if (jedisRan && !lettuceRan) v.skip("falta experimentar com o Lettuce: ./quest run 101-01 lettuce");

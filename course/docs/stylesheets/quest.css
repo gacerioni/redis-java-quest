@@ -83,3 +83,10 @@
 .quest-lessons li.done .mark { background: var(--quest-ok); border-color: var(--quest-ok); }
 .quest-lessons li a { color: inherit; }
 .quest-lessons li .min { margin-left: auto; color: var(--quest-muted); font-size: 0.72rem; }
+
+/* Active page in the left nav and active heading in the TOC */
+:root { --md-typeset-a-color: var(--quest-brand-dark); }
+[data-md-color-scheme="slate"] { --md-typeset-a-color: var(--quest-brand); }
+.md-nav__link--active, .md-nav__link--active code { color: var(--quest-brand) !important; font-weight: 700; }
+.md-sidebar--primary .md-nav__item .md-nav__link--active { border-left: 3px solid var(--quest-brand); padding-left: 0.45rem; margin-left: -0.6rem; }
+.md-nav__link:hover { color: var(--quest-brand-dark); }

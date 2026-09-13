@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Proves every reference solution in solutions/ passes its lesson check.
+# Copies the repo to a temp dir, drops the solutions over the stubs, builds offline, then for each lesson
+# with a solution: runs the lab (the check needs its state), runs the exercise with both clients, runs the check.
+#   REDIS_URL=redis://localhost:6379 scripts/verify_solutions.sh
+set -uo pipefail
+cd "$(dirname "$0")/.."
+export NO_COLOR=1
+export REDIS_URL="${REDIS_URL:-redis://localhost:6379}"
+export QUEST_PREFIX="${QUEST_PREFIX:-solutions}"
+TMP=$(mktemp -d)
+trap 'rm -rf "$TMP"' EXIT
+rsync -a --exclude target --exclude .git --exclude .venv --exclude course/site --exclude .claude --exclude .dev ./ "$TMP/"
+cd "$TMP"
+for d in solutions/l*/; do
+  pkg=$(basename "$d")
+  cp "$d"*.java "src/main/java/com/emberrealm/quest/lessons/$pkg/"
+done
+if [ -x ./mvnw ]; then ./mvnw -q -o -B -DskipTests package; else mvn -q -o -B -DskipTests package; fi || { echo "build with solutions failed"; exit 1; }
+fail=0
+java -jar target/quest.jar seed >/dev/null 2>&1
+for d in solutions/l*/; do
+  id=$(basename "$d" | sed 's/^l//; s/_/-/')
+  java -jar target/quest.jar run "$id" jedis >/dev/null 2>&1
+  for c in jedis lettuce; do
+    java -jar target/quest.jar exercise "$id" "$c" >/dev/null 2>&1 || { echo "FAIL exercise $id $c"; fail=1; }
+  done
+  if java -jar target/quest.jar check "$id" >/dev/null 2>&1; then echo "ok    $id (solutions pass)"; else echo "FAIL  check $id"; fail=1; fi
+done
+exit $fail

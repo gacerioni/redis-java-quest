@@ -40,6 +40,16 @@ public final class Lessons {
         return instantiate(lesson.packageName() + "." + simple, Lab.class);
     }
 
+    /** The student's exercise ("Sua vez") for one client: JedisExercise or LettuceExercise. */
+    public static Optional<Lab> exercise(Lesson lesson, String client) {
+        String simple = switch (client) {
+            case "jedis" -> "JedisExercise";
+            case "lettuce" -> "LettuceExercise";
+            default -> throw new IllegalArgumentException("client must be jedis or lettuce, got: " + client);
+        };
+        return instantiate(lesson.packageName() + "." + simple, Lab.class);
+    }
+
     public static Optional<Check> check(Lesson lesson) {
         return instantiate(lesson.packageName() + ".LessonCheck", Check.class);
     }

@@ -1,59 +1,62 @@
 ---
 lesson: 101-01
 title: "String: sessão e cooldown de habilidade"
-minutes: 8
+minutes: 15
 kind: lab
 ---
 
 # String: sessão e cooldown de habilidade
 
-<p class="lesson-meta">Lição 101-01 · Lab · 8 min</p>
+<p class="lesson-meta">Lição 101-01 · Lab + sua vez · 15 min</p>
 
 ## Por que isso importa
 
 Kaelith faz login, lança Bola de Fogo e derruba goblins. Cada uma dessas ações vira uma chave do tipo String, o tipo mais simples do Redis: um valor por chave, com prazo de vida opcional. A graça está nos detalhes: `SET ... EX` cria uma sessão que morre sozinha, `SET ... NX EX` implementa um cooldown sem condição de corrida e `INCR` soma abates sem ler o valor antes. Três problemas clássicos de backend (sessão, lock com prazo, contador) resolvidos com meia dúzia de comandos.
 
-## O que você vai fazer
+## Veja funcionando
 
-- Gravar a sessão de Kaelith com `SET ... EX 1800` e ler o `TTL`
-- Lançar Bola de Fogo duas vezes com `SET ... NX EX 5` e ver a segunda voltar `nil` ("em cooldown")
-- Contar abates com `INCR` e `INCRBY`, sem `GET` antes
-- Consumir um código de resgate de uso único com `GETDEL`
-- Ler três chaves numa viagem só com `MGET`
-
-## Rode
+Primeiro você assiste. O comando abaixo roda um lab pronto (`JedisLab.java` ou `LettuceLab.java`): você não escreve nada ainda, só lê a saída. Cada linha que começa com `>` é o comando Redis que o client enviou; a linha seguinte é a resposta.
 
 ```bash
 ./quest run 101-01 jedis
 ./quest run 101-01 lettuce
-./quest check 101-01
 ```
 
-## O código
+O que reparar na saída:
+
+- `SET ... EX 1800` cria a sessão e o `TTL` logo depois mostra os 1800 segundos contando.
+- O primeiro `SET ... NX EX 5` devolve `OK`; o segundo, feito logo em seguida, devolve `nil`: Bola de Fogo em cooldown.
+- `INCR`, `INCR`, `INCRBY 3` chegam a 5 sem nenhum `GET` no meio.
+- `GETDEL` lê o código de resgate e o apaga na mesma viagem; a segunda leitura volta `nil`.
+- `MGET` traz três chaves em uma ida só ao servidor.
+
+## Entenda o código
+
+Este é o miolo do lab que acabou de rodar, sem a narração do console e sem a limpeza inicial das chaves. O arquivo completo está em [`l101_01/JedisLab.java`](https://github.com/gacerioni/redis-java-quest/blob/main/src/main/java/com/emberrealm/quest/lessons/l101_01/JedisLab.java) e [`l101_01/LettuceLab.java`](https://github.com/gacerioni/redis-java-quest/blob/main/src/main/java/com/emberrealm/quest/lessons/l101_01/LettuceLab.java); abra na IDE e siga com o cursor.
 
 === "Jedis"
 
     ```java
     try (RedisClient jedis = Clients.jedis()) {
-        // login session that expires on its own
+        // sessao que expira sozinha
         jedis.set(session, token, SetParams.setParams().ex(1800));
         long ttl = jedis.ttl(session);                                                // 1800
 
-        // skill cooldown: check and write in one atomic step
+        // cooldown: checar e gravar em um passo atomico
         String first = jedis.set(cooldown, "1", SetParams.setParams().nx().ex(5));   // "OK"
         String second = jedis.set(cooldown, "1", SetParams.setParams().nx().ex(5));  // null: em cooldown
 
-        // atomic kill counter
+        // contador atomico de abates
         jedis.incr(kills);                                                            // 1
         jedis.incr(kills);                                                            // 2
         long total = jedis.incrBy(kills, 3);                                          // 5
 
-        // one-time redeem code
+        // codigo de resgate de uso unico
         jedis.set(redeem, "POCAO-RARA-7");
         jedis.getDel(redeem);                                                         // "POCAO-RARA-7"
         jedis.getDel(redeem);                                                         // null
 
-        // three keys, one round trip
+        // tres chaves, uma viagem
         List<String> values = jedis.mget(session, cooldown, kills);
     }
     ```
@@ -64,50 +67,104 @@ Kaelith faz login, lança Bola de Fogo e derruba goblins. Cada uma dessas açõe
     try (StatefulRedisConnection<String, String> connection = Clients.lettuceConnection()) {
         RedisCommands<String, String> redis = connection.sync();
 
+        // sessao que expira sozinha
         redis.set(session, token, SetArgs.Builder.ex(1800));
-        Long ttl = redis.ttl(session);                                                // 1800
+        long ttl = redis.ttl(session);                                                // 1800
 
-        String first = redis.set(cooldown, "1", SetArgs.Builder.nx().ex(5));          // "OK"
-        String second = redis.set(cooldown, "1", SetArgs.Builder.nx().ex(5));         // null: em cooldown
+        // cooldown: checar e gravar em um passo atomico
+        String first = redis.set(cooldown, "1", SetArgs.Builder.nx().ex(5));         // "OK"
+        String second = redis.set(cooldown, "1", SetArgs.Builder.nx().ex(5));        // null: em cooldown
 
+        // contador atomico de abates
         redis.incr(kills);                                                            // 1
         redis.incr(kills);                                                            // 2
-        Long total = redis.incrby(kills, 3);                                          // 5
+        long total = redis.incrby(kills, 3);                                          // 5
 
+        // codigo de resgate de uso unico
         redis.set(redeem, "POCAO-RARA-7");
         redis.getdel(redeem);                                                         // "POCAO-RARA-7"
         redis.getdel(redeem);                                                         // null
 
+        // tres chaves, uma viagem
         List<KeyValue<String, String>> values = redis.mget(session, cooldown, kills);
-        values.forEach(kv -> System.out.println(kv.getKey() + " = " + kv.getValueOrElse("(nil)")));
     }
     ```
 
+## Sua vez
+
+Agora é você quem escreve. Kaelith aprendeu **Cura Menor**: a habilidade tem cooldown de 8 segundos e cada cura que sai deve ser contada.
+
+Abra o arquivo do client que você escolheu e implemente o método `castHeal`, que hoje só lança `Todo`:
+
+- Jedis: `src/main/java/com/emberrealm/quest/lessons/l101_01/JedisExercise.java`
+- Lettuce: `src/main/java/com/emberrealm/quest/lessons/l101_01/LettuceExercise.java`
+
+Regras do método:
+
+| Regra | Como o check confere |
+|---|---|
+| A cura só sai se a chave `{p}:cooldown:kaelith:heal` ainda não existe | duas curas seguidas: só a primeira pode sair |
+| Quando sai, a chave nasce com TTL de 8 segundos | `TTL` da chave entre 0 e 8 |
+| Quando sai, `{p}:heals:kaelith` cresce em 1 | o contador tem que valer exatamente 1 |
+| Checar e gravar acontecem em um único comando | é a mesma ideia do `SET ... NX EX` que você viu no lab |
+| Devolve `true` quando a cura saiu, `false` em cooldown | a saída do exercício mostra os dois valores |
+
+O resto do arquivo é o arnês: limpa as chaves, chama `castHeal` duas vezes seguidas, mostra o resultado e registra o exercício para o check. Não precisa mexer nele.
+
+```bash
+./quest exercise 101-01 jedis      # ou lettuce
+./quest check 101-01
+```
+
+Enquanto o método não estiver implementado, o `exercise` para com o aviso "Sua vez: implemente castHeal" e o `check` marca a parte "Sua vez" em vermelho. Quando passar, o `check` mostra as três linhas verdes da sua vez. Travou? `./quest solve 101-01 --yes` copia a solução de referência por cima do seu arquivo.
+
+Quer ir além: faça `castHeal` devolver também quantos segundos faltam para poder curar de novo (`TTL`) e mostre isso na saída.
+
 ## O que olhar no Redis Insight
 
-No Browser, filtre por `quest:*` (ou pelo seu prefixo) logo depois de rodar o lab. `quest:session:kaelith` aparece como String com o token e um TTL perto de 1800 s caindo. `quest:cooldown:kaelith:fireball` dura 5 segundos: atualize a lista e veja a chave sumir sozinha. `quest:kills:kaelith` guarda `5` como texto, mesmo tendo nascido de `INCR`. No Workbench, rode `SET quest:cooldown:kaelith:fireball 1 NX EX 5` duas vezes seguidas e veja o `(nil)` da segunda. No Profiler, repare no `MGET`: uma linha só para três chaves.
+Depois do lab, filtre por `quest:*` no Browser: `quest:session:kaelith` mostra o TTL descendo em tempo real; `quest:cooldown:kaelith:fireball` aparece e some em 5 segundos; `quest:kills:kaelith` guarda `5`. Depois da sua vez, `quest:cooldown:kaelith:heal` e `quest:heals:kaelith` aparecem ao lado. No Profiler, rode o lab de novo e veja a sequência exata de `SET`, `INCR`, `GETDEL` e `MGET` que o client enviou.
 
 ## Por dentro
 
 | Comando | O que faz |
 |---|---|
-| `SET chave valor EX 1800` | Grava e já define o prazo em segundos (`PX` para milissegundos) na mesma operação |
-| `SET chave valor NX EX 5` | Só grava se a chave não existe, e com prazo; devolve `nil` quando perde a disputa |
-| `TTL chave` | Segundos restantes; `-1` quando não há prazo, `-2` quando a chave não existe |
-| `INCR chave`, `INCRBY chave 3` | Soma atômica no servidor; a chave nasce em 0 se não existir |
-| `GET chave` | Lê o valor; contadores voltam como texto e você converte na aplicação |
-| `GETDEL chave` | Lê e apaga numa operação só (Redis 6.2+); ideal para códigos de uso único |
-| `MGET c1 c2 c3` | Vários valores numa viagem; `nil` nas posições das chaves que não existem |
-
-!!! tip "Jedis e Lettuce, mesma ideia, nomes diferentes"
-    Jedis agrupa as opções do `SET` em `SetParams` (`nx()`, `ex()`, `px()`, `keepttl()`); Lettuce usa `SetArgs.Builder` com os mesmos nomes. Nos dois, um `SET ... NX` que perde a disputa devolve `null`, não uma exceção: trate o `null` como "em cooldown".
+| `SET key value EX 1800` | Grava e já agenda a expiração em 1800 s |
+| `SET key value NX EX 5` | Só grava se a chave não existe (NX), com TTL de 5 s (EX); devolve `nil` se já existia |
+| `TTL key` | Segundos restantes; `-1` sem prazo, `-2` chave não existe |
+| `INCR key`, `INCRBY key n` | Soma atômica no valor numérico da String |
+| `GETDEL key` | Devolve o valor e apaga a chave na mesma operação |
+| `MGET k1 k2 k3` | Vários valores em uma ida ao servidor |
 
 ## Em produção
 
-- Prazo sempre na mesma chamada: `SET` com `EX`, nunca `SET` e depois `EXPIRE`. Em duas viagens, se o processo cair no meio, a chave fica para sempre sem prazo. Mais sobre TTL e nomes de chave em [Chaves, TTL e SCAN](../fundamentos/04-chaves-ttl-scan.md).
-- `SET NX EX` é a base do lock distribuído simples: quem ganha o `NX` tem o lock e o `EX` garante que ele solta sozinho se o dono morrer. Grave um valor único por dono e, ao soltar, compare antes de apagar (script Lua ou, nas versões mais novas do Redis, `DELEX` com condição).
-- Contador por janela de tempo (rate limit por minuto, por exemplo): `INCR` e, quando a resposta for 1, `EXPIRE` da janela; ou uma chave por janela no próprio nome (`quest:req:kaelith:202609111530`), que expira sozinha.
+- Sessão com TTL dispensa job de limpeza; renove o prazo com `EXPIRE` a cada requisição válida (sliding session).
+- `SET NX EX` é o lock mais simples do Redis; para liberar com segurança, apague só se o valor ainda for o seu (script Lua ou `DEL` condicional), nunca um `DEL` cego.
+- Contadores com `INCR` são atômicos mesmo com dezenas de instâncias da aplicação escrevendo ao mesmo tempo. Nada de `GET`, somar em Java e `SET` de volta.
 
-## Desafio
+??? note "Ver a solução de referência"
 
-Mude `COOLDOWN_SECONDS` para 2, lance a magia, espere com `Thread.sleep(2100)` e lance de novo: agora o segundo `SET NX EX` devolve `OK`, porque o prazo venceu. Depois troque o `INCRBY 3` por `INCRBY -3` (o comando aceita negativos; `DECRBY` é só um atalho), rode o check e veja a reclamação: ele exige pelo menos 3 abates. Volte o valor e rode de novo.
+    === "Jedis"
+
+        ```java
+        static boolean castHeal(RedisClient jedis, String cooldownKey, String healsKey) {
+            String reply = jedis.set(cooldownKey, "1", SetParams.setParams().nx().ex(HEAL_COOLDOWN_SECONDS));
+            if (reply == null) {
+                return false; // a chave ja existia: ainda em cooldown
+            }
+            jedis.incr(healsKey);
+            return true;
+        }
+        ```
+
+    === "Lettuce"
+
+        ```java
+        static boolean castHeal(RedisCommands<String, String> redis, String cooldownKey, String healsKey) {
+            String reply = redis.set(cooldownKey, "1", SetArgs.Builder.nx().ex(HEAL_COOLDOWN_SECONDS));
+            if (reply == null) {
+                return false; // a chave ja existia: ainda em cooldown
+            }
+            redis.incr(healsKey);
+            return true;
+        }
+        ```

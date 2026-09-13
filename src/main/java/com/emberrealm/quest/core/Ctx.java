@@ -28,6 +28,28 @@ public final class Ctx {
         return keys.of("progress", lesson);
     }
 
+    /** Marker written by the student's own exercise code ("Sua vez"); the check requires it. */
+    public String exerciseKey() {
+        return keys.of("exercise", lesson);
+    }
+
+    /** Records that the exercise ran, with a few stats the check can read back. Pairs: field, value... */
+    public void exerciseDone(String... fieldValuePairs) {
+        Map<String, String> fields = new LinkedHashMap<>();
+        fields.put("client", client);
+        fields.put("at", Instant.now().toString());
+        fields.put("ran_" + client, "1");
+        for (int i = 0; i + 1 < fieldValuePairs.length; i += 2) {
+            fields.put(fieldValuePairs[i], fieldValuePairs[i + 1]);
+        }
+        try (redis.clients.jedis.RedisClient marker = Clients.jedis()) {
+            marker.hset(exerciseKey(), fields);
+        }
+        out.blank();
+        out.ok("Sua vez registrada na lição " + lesson + " com " + client + ". Marcador: " + exerciseKey());
+        out.info("Confira com: ./quest check " + lesson);
+    }
+
     /** Records that this lesson ran, with a few stats the check can read back. Pairs: field, value, field, value... */
     public void done(String... fieldValuePairs) {
         Map<String, String> fields = new LinkedHashMap<>();
