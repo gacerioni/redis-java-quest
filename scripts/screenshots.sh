@@ -25,7 +25,7 @@ shot() { # name width path [height]
 }
 for w in 1680 1280; do
   shot landing        "$w" "/" 1500
-  shot comece-aqui    "$w" "/comece-aqui/redis-cloud/" 1400
+  shot licao0         "$w" "/comece-aqui/" 2600
   shot curso-tipos    "$w" "/101-tipos/" 1200
   shot licao-hash     "$w" "/101-tipos/02-hash/" 2600
   shot licao-bloqueio "$w" "/102-eventos/04-conexoes-bloqueantes/" 2600

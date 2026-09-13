@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 
 {% block content %}
+  {% if page.meta.lesson and page.meta.lesson != "setup" %}
+  <div class="quest-prereq" data-quest-prereq hidden>
+    <span>Primeira vez aqui? Esta lição roda no seu terminal e precisa do projeto configurado: Java 21, um Redis (Cloud free ou Docker), o clone e o <code>.env</code>.</span>
+    <a class="quest-btn" data-quest-setup-link href="#">Lição 0: do zero ao primeiro comando (15 min)</a>
+  </div>
+  {% endif %}
   {{ super() }}
   {% if page.meta.lesson %}
   <div class="quest-complete" data-lesson="{{ page.meta.lesson }}" data-title="{{ page.meta.title }}"></div>

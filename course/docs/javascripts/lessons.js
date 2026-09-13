@@ -8,6 +8,7 @@ window.QUEST.courses = [
   { id: "301", name: "Produção", url: "301-producao/", quiz: "301-producao/quiz/", next: null }
 ];
 window.QUEST.lessons = [
+  { id: "setup", course: "100", title: "Do zero ao primeiro comando", url: "comece-aqui/", minutes: 15 },
   { id: "100-01", course: "100", title: "O mapa do mundo", url: "fundamentos/01-mapa-do-mundo/", minutes: 8 },
   { id: "100-02", course: "100", title: "Conectar com Jedis e Lettuce", url: "fundamentos/02-conectar/", minutes: 8 },
   { id: "100-03", course: "100", title: "Redis Insight", url: "fundamentos/03-redis-insight/", minutes: 6 },

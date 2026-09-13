@@ -104,8 +104,17 @@
     });
   }
 
+  function renderPrereq(state) {
+    var banner = document.querySelector("[data-quest-prereq]");
+    if (!banner) return;
+    var link = banner.querySelector("[data-quest-setup-link]");
+    if (link) link.href = urlOf("comece-aqui/");
+    banner.hidden = !!state.done["setup"];
+  }
+
   function renderAll() {
     var state = load();
+    renderPrereq(state);
     renderComplete(state);
     renderNav(state);
     renderCards(state);

@@ -20,7 +20,7 @@ hide:
 <div><strong>0</strong><span>reais pra começar</span></div>
 </div>
 
-<a class="quest-btn" href="comece-aqui/">Comece aqui</a>
+<a class="quest-btn" href="comece-aqui/">Comece aqui: do zero ao primeiro comando</a>
 
 </div>
 
@@ -31,7 +31,7 @@ hide:
 <span class="code">Fundamentos</span>
 <h3>Fundamentos</h3>
 <p>OSS, Cluster e Redis Cloud. Por que o client não precisa saber de shard. Conectar com Jedis e Lettuce, Redis Insight, chaves, TTL, SCAN e pipeline.</p>
-<div class="meta"><span>5 lições</span><span class="badge">Não iniciado</span></div>
+<div class="meta"><span>Setup + 5 lições</span><span class="badge">Não iniciado</span></div>
 <div class="course-progress"><span></span></div>
 </a>
 <a class="course-card" data-course="101" href="101-tipos/">
@@ -77,7 +77,7 @@ hide:
 
 ## Como funciona
 
-1. **Crie seu Redis Cloud free** em cinco minutos, sem cartão. Você recebe uma URL e cola no projeto. Tudo roda contra um Redis de verdade, na nuvem, na região de São Paulo.
+1. **Faça a lição 0** (15 minutos): Java, Redis Cloud free sem cartão, clone do projeto, `.env` e o primeiro comando. Tudo roda contra um Redis de verdade, na nuvem, na região de São Paulo.
 2. **Clone o repositório e rode `./quest`.** Cada lição é um programa Java que você executa com Jedis e depois com Lettuce. A saída mostra o comando Redis enviado e o resultado.
 3. **Siga as lições e confira com `./quest check`.** O check inspeciona o seu Redis e diz o que está pronto e o que falta. Marque a lição como concluída: o progresso fica salvo no seu navegador.
 

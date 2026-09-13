@@ -9,11 +9,11 @@ theme:
   name: material
   language: pt-BR
   custom_dir: overrides
-  logo: assets/logo.svg
-  favicon: assets/logo.svg
+  logo: assets/brand/Redis_Mark_White_RGB.svg
+  favicon: assets/brand/Redis_Mark_Red_RGB.svg
   font:
-    text: Inter
-    code: JetBrains Mono
+    text: Space Grotesk
+    code: Space Mono
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
@@ -74,13 +74,9 @@ extra:
 
 nav:
   - Início: index.md
-  - Comece aqui:
-      - comece-aqui/index.md
-      - Crie seu Redis Cloud: comece-aqui/redis-cloud.md
-      - Prepare a máquina: comece-aqui/maquina.md
-      - Rode a primeira lição: comece-aqui/primeira-licao.md
   - Fundamentos:
       - fundamentos/index.md
+      - 00 Do zero ao primeiro comando: comece-aqui/index.md
       - 01 O mapa do mundo: fundamentos/01-mapa-do-mundo.md
       - 02 Conectar com Jedis e Lettuce: fundamentos/02-conectar.md
       - 03 Redis Insight: fundamentos/03-redis-insight.md

@@ -4,9 +4,10 @@ title: "Fundamentos"
 
 # Fundamentos
 
-Cinco lições curtas para entender o terreno: o que muda entre Redis OSS, um cluster OSS e o Redis Cloud, por que o client conversa com um endpoint só, como conectar com Jedis e Lettuce, como enxergar o banco no Redis Insight e as primeiras boas práticas de chaves, TTL, SCAN e pipeline.
+Uma lição de setup para sair do zero e cinco lições curtas para entender o terreno: o que muda entre Redis OSS, um cluster OSS e o Redis Cloud, por que o client conversa com um endpoint só, como conectar com Jedis e Lettuce, como enxergar o banco no Redis Insight e as primeiras boas práticas de chaves, TTL, SCAN e pipeline.
 
 <ul class="quest-lessons" data-course="100">
+<li data-lesson="setup"><span class="mark"></span><span class="num">0</span><a href="../comece-aqui/">Do zero ao primeiro comando (setup)</a><span class="min">15 min</span></li>
 <li data-lesson="100-01"><span class="mark"></span><span class="num">100-01</span><a href="01-mapa-do-mundo/">O mapa do mundo: OSS, Cluster e Redis Cloud</a><span class="min">8 min</span></li>
 <li data-lesson="100-02"><span class="mark"></span><span class="num">100-02</span><a href="02-conectar/">Conectar com Jedis e Lettuce</a><span class="min">8 min</span></li>
 <li data-lesson="100-03"><span class="mark"></span><span class="num">100-03</span><a href="03-redis-insight/">Redis Insight: enxergando o reino</a><span class="min">6 min</span></li>

@@ -12,7 +12,7 @@ one short lesson at a time: cache, sessions, queues, events, search, and product
 
 ## Quick start
 
-Requirements: Java 21+, Git. Maven is optional (`./mvnw` downloads it).
+Requirements: Java 21+, Git. Maven is optional (`./mvnw` downloads it). The course site walks a newcomer through all of this in "Lição 0: do zero ao primeiro comando".
 
 ```bash
 git clone https://github.com/gacerioni/redis-java-quest.git
