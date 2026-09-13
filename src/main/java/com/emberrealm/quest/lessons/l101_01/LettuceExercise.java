@@ -3,12 +3,13 @@ package com.emberrealm.quest.lessons.l101_01;
 import com.emberrealm.quest.core.Clients;
 import com.emberrealm.quest.core.Ctx;
 import com.emberrealm.quest.core.Lab;
+import com.emberrealm.quest.core.Todo;
 import io.lettuce.core.SetArgs;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
 
 /**
- * 101-01, reference solution (Lettuce). Same task as JedisExercise: Minor Heal with an 8 second cooldown and a
+ * 101-01, your turn (Lettuce). Same task as JedisExercise: Minor Heal with an 8 second cooldown and a
  * heal counter. Implement castHeal below; the harness cleans the keys, casts twice and records the result.
  */
 public final class LettuceExercise implements Lab {
@@ -50,12 +51,7 @@ public final class LettuceExercise implements Lab {
      * redis.incr(healsKey).
      */
     static boolean castHeal(RedisCommands<String, String> redis, String cooldownKey, String healsKey) {
-        // NX: only if the key does not exist; EX: it expires by itself. One atomic command.
-        String reply = redis.set(cooldownKey, "1", SetArgs.Builder.nx().ex(HEAL_COOLDOWN_SECONDS));
-        if (reply == null) {
-            return false; // the key was already there: still in cooldown
-        }
-        redis.incr(healsKey);
-        return true;
+        throw new Todo("implemente castHeal: SET " + cooldownKey + " 1 NX EX " + HEAL_COOLDOWN_SECONDS
+                + " e, só quando o SET devolver OK, INCR " + healsKey);
     }
 }

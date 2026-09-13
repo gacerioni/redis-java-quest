@@ -112,9 +112,48 @@
     banner.hidden = !!state.done["setup"];
   }
 
+  function renderSteps() {
+    var box = document.querySelector(".quest-complete");
+    if (!box || !Q.steps) return;
+    var id = box.getAttribute("data-lesson");
+    var steps = Q.steps[id];
+    if (!steps || document.querySelector(".quest-steps")) return;
+    var meta = document.querySelector(".md-content__inner .lesson-meta") || document.querySelector(".md-content__inner h1");
+    if (!meta) return;
+    var panel = document.createElement("div");
+    panel.className = "quest-steps";
+    var head = document.createElement("p");
+    head.className = "quest-steps-title";
+    head.textContent = "Passos desta lição (o quest confere cada um)";
+    panel.appendChild(head);
+    var list = document.createElement("ol");
+    steps.forEach(function (s) {
+      var li = document.createElement("li");
+      var title = document.createElement("strong");
+      title.textContent = s.title;
+      li.appendChild(title);
+      var text = document.createElement("span");
+      text.textContent = s.instruction.replace(/\{p\}/g, "quest");
+      li.appendChild(text);
+      if (s.command) {
+        var code = document.createElement("code");
+        code.textContent = s.command.replace(/\{p\}/g, "quest");
+        li.appendChild(code);
+      }
+      list.appendChild(li);
+    });
+    panel.appendChild(list);
+    var foot = document.createElement("p");
+    foot.className = "quest-steps-foot";
+    foot.innerHTML = "Comece com <code>./quest start " + id + "</code>. Fez um passo: <code>./quest verify " + id + "</code>. Travou: <code>./quest solve " + id + "</code>. Quer pular: <code>./quest skip " + id + "</code>.";
+    panel.appendChild(foot);
+    meta.parentNode.insertBefore(panel, meta.nextSibling);
+  }
+
   function renderAll() {
     var state = load();
     renderPrereq(state);
+    renderSteps();
     renderComplete(state);
     renderNav(state);
     renderCards(state);

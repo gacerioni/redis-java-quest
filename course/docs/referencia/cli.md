@@ -8,16 +8,19 @@ O `quest` é um wrapper fino sobre `java -jar target/quest.jar`. Ele compila o p
 
 | Comando | O que faz |
 |---|---|
-| `./quest list` | Lista as lições por curso e marca as concluídas (lê os marcadores no Redis) |
+| `./quest start <id>` | Prepara a lição (semeia se preciso, roda o setup dos passos) e mostra os passos com o próximo a fazer |
+| `./quest verify <id>` | Confere cada passo no seu Redis, marca os concluídos e aponta o que falta (`verify all` para tudo) |
+| `./quest solve <id> [passo]` | Faz o próximo passo por você (roda o lab, executa o comando ou copia a solução do exercício e roda) |
+| `./quest skip <id> [passo]` | Igual ao `solve`, mas marca o passo como pulado |
+| `./quest next` | Vai para a primeira lição com passo pendente |
+| `./quest run <id> jedis` ou `lettuce` ou `both` | Roda o lab pronto da lição |
+| `./quest exercise <id> jedis` ou `lettuce` | Roda o SEU código do exercício (`JedisExercise` / `LettuceExercise`) |
+| `./quest list` | Lições por curso com os passos concluídos |
 | `./quest seed` | Carrega o mundo Ember Realm no seu prefixo (idempotente) |
-| `./quest run <id> jedis` | Roda a lição com Jedis |
-| `./quest run <id> lettuce` | Roda a lição com Lettuce |
-| `./quest run <id> both` | Roda com os dois, em sequência |
-| `./quest check <id>` | Inspeciona o Redis e diz o que está pronto e o que falta |
-| `./quest check all` | Roda todos os checks |
-| `./quest progress` | Mostra as lições com marcador gravado |
 | `./quest reset --yes` | Apaga todas as chaves do seu prefixo |
-| `./quest doctor` | Relatório de conexão (o mesmo que `run 100-01 jedis`) |
+| `./quest doctor` | Relatório de conexão |
+
+Ciclo de vida de cada passo, no estilo dos labs guiados: `start` prepara, você age, `verify` confere, `solve` faz por você quando travar, `skip` pula. O progresso dos passos fica no hash `{prefixo}:steps:<id>` do seu Redis.
 
 No Windows, troque `./quest` por `quest.cmd`.
 

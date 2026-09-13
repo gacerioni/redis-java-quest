@@ -4,11 +4,6 @@ import com.emberrealm.quest.world.Seed;
 import redis.clients.jedis.params.ScanParams;
 import redis.clients.jedis.resps.ScanResult;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -63,6 +58,49 @@ public final class Main {
                 }
                 return run(out, keys, args[1], client);
             }
+            case "start" -> {
+                if (args.length < 2) return usage(out);
+                return withLesson(out, args[1], l -> StepEngine.start(new Ctx(keys, out, l.id(), "steps"), l));
+            }
+            case "steps" -> {
+                if (args.length >= 2 && (args[1].equals("--json") || args[1].equals("--js"))) {
+                    String json = StepEngine.toJson();
+                    System.out.println(args[1].equals("--js") ? "window.QUEST = window.QUEST || {};\nwindow.QUEST.steps = " + json + ";" : json);
+                    return 0;
+                }
+                if (args.length < 2) return usage(out);
+                return withLesson(out, args[1], l -> StepEngine.show(new Ctx(keys, out, l.id(), "steps"), l, StepEngine.stepsFor(l), "Passos:"));
+            }
+            case "verify", "check" -> {
+                if (args.length < 2) return usage(out);
+                if (args[1].equals("all")) {
+                    int worst = 0;
+                    for (Lessons.Lesson l : Lessons.all()) {
+                        if (StepEngine.stepsFor(l).isEmpty()) continue;
+                        out.h1("verify " + l.id() + " " + l.title());
+                        worst = Math.max(worst, StepEngine.verify(new Ctx(keys, out, l.id(), "steps"), l));
+                    }
+                    return worst;
+                }
+                return withLesson(out, args[1], l -> {
+                    out.h1("verify " + l.id() + " " + l.title());
+                    return StepEngine.verify(new Ctx(keys, out, l.id(), "steps"), l);
+                });
+            }
+            case "skip" -> {
+                if (args.length < 2) return usage(out);
+                String selector = args.length >= 3 ? args[2] : null;
+                return withLesson(out, args[1], l -> StepEngine.solve(new Ctx(keys, out, l.id(), "steps"), l, selector, true));
+            }
+            case "next" -> {
+                Optional<Lessons.Lesson> next = StepEngine.nextLesson(keys);
+                if (next.isEmpty()) {
+                    out.ok("Você concluiu todos os passos de todas as lições. Parabéns, aventureiro.");
+                    return 0;
+                }
+                out.h1(next.get().id() + " " + next.get().title());
+                return StepEngine.start(new Ctx(keys, out, next.get().id(), "steps"), next.get());
+            }
             case "exercise" -> {
                 if (args.length < 2) return usage(out);
                 String client = args.length >= 3 ? args[2] : "jedis";
@@ -75,16 +113,8 @@ public final class Main {
             }
             case "solve" -> {
                 if (args.length < 2) return usage(out);
-                return solve(out, args[1], args.length >= 3 && args[2].equals("--yes"));
-            }
-            case "check" -> {
-                if (args.length < 2) return usage(out);
-                if (args[1].equals("all")) {
-                    int worst = 0;
-                    for (Lessons.Lesson l : Lessons.all()) worst = Math.max(worst, check(out, keys, l.id()));
-                    return worst;
-                }
-                return check(out, keys, args[1]);
+                String selector = args.length >= 3 && !args[2].startsWith("--") ? args[2] : null;
+                return withLesson(out, args[1], l -> StepEngine.solve(new Ctx(keys, out, l.id(), "steps"), l, selector, false));
             }
             case "reset" -> { return reset(out, keys, args.length >= 2 && args[1].equals("--yes")); }
             case "progress" -> { return progress(out, keys); }
@@ -96,10 +126,13 @@ public final class Main {
         out.h1("Redis Java Quest");
         out.info("quest list                 lições e progresso");
         out.info("quest seed                 carrega o mundo Ember Realm no seu Redis");
-        out.info("quest run <id> <client>    roda o lab pronto da lição: client = jedis | lettuce | both");
-        out.info("quest exercise <id> <client>  roda o SEU código da lição (JedisExercise / LettuceExercise)");
-        out.info("quest solve <id> --yes     copia a solução de referência por cima do seu exercício");
-        out.info("quest check <id|all>       confere o estado da lição no Redis (lab e sua vez)");
+        out.info("quest start <id>           prepara a lição e mostra os passos (setup)");
+        out.info("quest verify <id|all>      confere cada passo no Redis e marca os concluídos");
+        out.info("quest solve <id> [passo]   faz o próximo passo (ou o passo n) por você");
+        out.info("quest skip <id> [passo]    igual ao solve, mas marca o passo como pulado");
+        out.info("quest next                 vai para a primeira lição com passo pendente");
+        out.info("quest run <id> <client>    roda o lab pronto: client = jedis | lettuce | both");
+        out.info("quest exercise <id> <client>  roda o SEU código (JedisExercise / LettuceExercise)");
         out.info("quest reset --yes          apaga todas as chaves do seu prefixo");
         out.info("quest doctor               relatório de conexão");
         out.blank();
@@ -108,8 +141,12 @@ public final class Main {
     }
 
     private static int list(Console out, Keys keys) {
-        Map<String, Boolean> done = doneMarkers(keys, "progress");
-        Map<String, Boolean> exercised = doneMarkers(keys, "exercise");
+        Map<String, Map<String, String>> stepProgress = new HashMap<>();
+        try (redis.clients.jedis.RedisClient jedis = Clients.jedis()) {
+            for (Lessons.Lesson l : Lessons.all()) stepProgress.put(l.id(), jedis.hgetAll(StepEngine.stepsKey(keys, l.id())));
+        } catch (Exception ignored) {
+            // no Redis reachable: list still works, just without progress
+        }
         String course = "";
         out.h1("Lições");
         for (Lessons.Lesson l : Lessons.all()) {
@@ -118,19 +155,16 @@ public final class Main {
                 out.blank();
                 out.step(course);
             }
-            boolean hasCode = Lessons.lab(l, "jedis").isPresent();
-            boolean hasExercise = Lessons.exercise(l, "jedis").isPresent();
-            boolean labDone = done.getOrDefault(l.id(), false);
-            boolean yourTurnDone = exercised.getOrDefault(l.id(), false);
+            int[] c = StepEngine.counts(keys, l, stepProgress.getOrDefault(l.id(), Map.of()));
             String mark;
-            if (!hasCode) mark = "[ ] (em breve)";
-            else if (labDone && (!hasExercise || yourTurnDone)) mark = "[x]";
-            else if (labDone) mark = "[~]";
-            else mark = "[ ]";
-            out.info(mark + " " + l.id() + "  " + l.title() + (hasExercise && !yourTurnDone && labDone ? "   (falta a sua vez)" : ""));
+            if (c[1] == 0) mark = "[ ] (em breve)   ";
+            else if (c[0] == c[1]) mark = "[x] " + c[0] + "/" + c[1] + " passos";
+            else if (c[0] > 0) mark = "[~] " + c[0] + "/" + c[1] + " passos";
+            else mark = "[ ] " + c[0] + "/" + c[1] + " passos";
+            out.info(String.format("%-18s %s  %s", mark, l.id(), l.title()));
         }
         out.blank();
-        out.info("[x] lab e sua vez feitos   [~] lab visto, falta a sua vez   [ ] não começou");
+        out.info("[x] todos os passos   [~] em andamento   [ ] não começou.   ./quest next leva ao próximo passo pendente.");
         out.info("Redis: " + Env.redacted(Env.redisUrl()) + "   prefixo: " + keys.prefix());
         return 0;
     }
@@ -175,29 +209,18 @@ public final class Main {
         }
     }
 
-    private static int solve(Console out, String id, boolean confirmed) throws IOException {
-        Path from = Paths.get("solutions", "l" + id.replace('-', '_'));
-        Path to = Paths.get("src", "main", "java", "com", "emberrealm", "quest", "lessons", "l" + id.replace('-', '_'));
-        if (!Files.isDirectory(from)) {
-            out.warn("Não há solução de referência para " + id + " (pasta " + from + " não existe). Rode a partir da raiz do repositório.");
-            return 3;
+    @FunctionalInterface
+    interface LessonCommand {
+        int run(Lessons.Lesson lesson) throws Exception;
+    }
+
+    private static int withLesson(Console out, String id, LessonCommand command) throws Exception {
+        Optional<Lessons.Lesson> lesson = Lessons.byId(id);
+        if (lesson.isEmpty()) {
+            out.fail("Lição desconhecida: " + id + ". Use: quest list");
+            return 2;
         }
-        List<Path> files;
-        try (var stream = Files.list(from)) {
-            files = stream.filter(f -> f.toString().endsWith(".java")).sorted().toList();
-        }
-        if (!confirmed) {
-            out.warn("Isso sobrescreve o SEU código em " + to + ":");
-            for (Path f : files) out.info("  " + to.resolve(f.getFileName()));
-            out.hint("Confirme com: ./quest solve " + id + " --yes");
-            return 0;
-        }
-        for (Path f : files) {
-            Files.copy(f, to.resolve(f.getFileName()), StandardCopyOption.REPLACE_EXISTING);
-            out.ok("copiado " + f + " -> " + to.resolve(f.getFileName()));
-        }
-        out.info("Agora rode: ./quest exercise " + id + " jedis (o quest recompila sozinho) e depois ./quest check " + id);
-        return 0;
+        return command.run(lesson.get());
     }
 
     private static int seed(Console out, Keys keys) throws Exception {
@@ -222,28 +245,6 @@ public final class Main {
         Ctx ctx = new Ctx(keys, out, id, client);
         lab.get().run(ctx);
         return 0;
-    }
-
-    private static int check(Console out, Keys keys, String id) throws Exception {
-        Optional<Lessons.Lesson> lesson = Lessons.byId(id);
-        if (lesson.isEmpty()) {
-            out.fail("Lição desconhecida: " + id);
-            return 2;
-        }
-        Optional<Check> check = Lessons.check(lesson.get());
-        if (check.isEmpty()) {
-            out.warn("Lição " + id + " ainda não tem check (em breve).");
-            return 3;
-        }
-        out.h1("check " + id + " " + lesson.get().title());
-        Ctx ctx = new Ctx(keys, out, id, "check");
-        Verdict verdict = new Verdict();
-        check.get().run(ctx, verdict);
-        verdict.print(out);
-        out.blank();
-        if (verdict.ok()) out.ok("Lição " + id + " completa.");
-        else out.fail("Ainda falta coisa na lição " + id + ". Rode a lição de novo e confira as dicas acima.");
-        return verdict.ok() ? 0 : 1;
     }
 
     private static int reset(Console out, Keys keys, boolean confirmed) {

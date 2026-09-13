@@ -50,6 +50,11 @@ public final class Lessons {
         return instantiate(lesson.packageName() + "." + simple, Lab.class);
     }
 
+    /** The declared steps of a lesson (LessonSteps), when the author wrote them. */
+    public static Optional<Steps> steps(Lesson lesson) {
+        return instantiate(lesson.packageName() + ".LessonSteps", Steps.class);
+    }
+
     public static Optional<Check> check(Lesson lesson) {
         return instantiate(lesson.packageName() + ".LessonCheck", Check.class);
     }

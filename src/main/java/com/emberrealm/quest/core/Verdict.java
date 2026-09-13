@@ -2,24 +2,28 @@ package com.emberrealm.quest.core;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 
-/** Collects pass/fail lines produced by a Check. */
+/** Collects pass/fail/skip lines produced by a Check or a Step, in insertion order. */
 public final class Verdict {
 
-    private final List<String> passes = new ArrayList<>();
-    private final List<String[]> fails = new ArrayList<>();
-    private final List<String> skips = new ArrayList<>();
+    public enum Kind { PASS, FAIL, SKIP }
+
+    public record Entry(Kind kind, String text, String hint) {
+    }
+
+    private final List<Entry> entries = new ArrayList<>();
 
     public void pass(String what) {
-        passes.add(what);
+        entries.add(new Entry(Kind.PASS, what, null));
     }
 
     public void fail(String what, String hint) {
-        fails.add(new String[]{what, hint});
+        entries.add(new Entry(Kind.FAIL, what, hint));
     }
 
     public void skip(String why) {
-        skips.add(why);
+        entries.add(new Entry(Kind.SKIP, why, null));
     }
 
     public void expect(boolean condition, String what, String hint) {
@@ -28,15 +32,34 @@ public final class Verdict {
     }
 
     public boolean ok() {
-        return fails.isEmpty();
+        return entries.stream().noneMatch(e -> e.kind() == Kind.FAIL);
+    }
+
+    public List<Entry> entries() {
+        return List.copyOf(entries);
+    }
+
+    public void addAll(Verdict other) {
+        entries.addAll(other.entries);
+    }
+
+    /** A new verdict with only the entries whose text matches. */
+    public Verdict filtered(Predicate<String> textMatches) {
+        Verdict v = new Verdict();
+        for (Entry e : entries) if (textMatches.test(e.text())) v.entries.add(e);
+        return v;
     }
 
     public void print(Console out) {
-        passes.forEach(out::ok);
-        for (String[] f : fails) {
-            out.fail(f[0]);
-            if (f[1] != null && !f[1].isBlank()) out.hint(f[1]);
+        for (Entry e : entries) {
+            switch (e.kind()) {
+                case PASS -> out.ok(e.text());
+                case SKIP -> out.warn(e.text());
+                case FAIL -> {
+                    out.fail(e.text());
+                    if (e.hint() != null && !e.hint().isBlank()) out.hint(e.hint());
+                }
+            }
         }
-        skips.forEach(out::warn);
     }
 }

@@ -66,6 +66,7 @@ extra_css:
   - stylesheets/quest.css
 extra_javascript:
   - javascripts/lessons.js
+  - javascripts/steps.js
   - javascripts/progress.js
   - javascripts/quiz.js
 

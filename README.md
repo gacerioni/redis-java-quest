@@ -20,10 +20,15 @@ cd redis-java-quest
 cp .env.example .env            # paste your Redis URL (redis://default:PASSWORD@host:port)
 ./quest doctor                  # first run builds the jar
 ./quest seed                    # loads the Ember Realm world under your key prefix
-./quest run 100-02 jedis
-./quest run 100-02 lettuce
-./quest check 100-02
+./quest start 100-02            # setup + the steps of the lesson
+./quest run 100-02 jedis        # step 1: run the ready lab (or lettuce)
+./quest verify 100-02           # checks every step in your Redis
+./quest solve 100-02            # stuck? does the next step for you (skip marks it as skipped)
 ```
+
+Every lesson is a small workflow with the lab lifecycle of guided platforms: `start` (setup), `verify`, `solve`, `skip`.
+Lessons also have a "Sua vez" step: a `JedisExercise`/`LettuceExercise` stub with a hole the student must implement
+(`./quest exercise <id> jedis`); reference solutions live in `solutions/`.
 
 No Redis yet? `docker compose up -d` starts Redis 8 (all modules) on `localhost:6379` and Redis Insight on `http://localhost:5540`.
 The local Redis is configured with `maxclients 30` on purpose to mirror the Redis Cloud free plan (lesson 102-04 depends on it).

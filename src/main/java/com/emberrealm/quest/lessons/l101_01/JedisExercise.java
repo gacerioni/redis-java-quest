@@ -3,11 +3,12 @@ package com.emberrealm.quest.lessons.l101_01;
 import com.emberrealm.quest.core.Clients;
 import com.emberrealm.quest.core.Ctx;
 import com.emberrealm.quest.core.Lab;
+import com.emberrealm.quest.core.Todo;
 import redis.clients.jedis.RedisClient;
 import redis.clients.jedis.params.SetParams;
 
 /**
- * 101-01, reference solution (Jedis). Kaelith learned Minor Heal: an 8 second cooldown, and every heal that
+ * 101-01, your turn (Jedis). Kaelith learned Minor Heal: an 8 second cooldown, and every heal that
  * goes out counts. Implement castHeal below. Everything else in this file is the harness: it cleans
  * the keys, casts twice in a row and records the result for ./quest check 101-01.
  */
@@ -49,12 +50,7 @@ public final class JedisExercise implements Lab {
      * jedis.incr(healsKey).
      */
     static boolean castHeal(RedisClient jedis, String cooldownKey, String healsKey) {
-        // NX: only if the key does not exist; EX: it expires by itself. One atomic command.
-        String reply = jedis.set(cooldownKey, "1", SetParams.setParams().nx().ex(HEAL_COOLDOWN_SECONDS));
-        if (reply == null) {
-            return false; // the key was already there: still in cooldown
-        }
-        jedis.incr(healsKey);
-        return true;
+        throw new Todo("implemente castHeal: SET " + cooldownKey + " 1 NX EX " + HEAL_COOLDOWN_SECONDS
+                + " e, só quando o SET devolver OK, INCR " + healsKey);
     }
 }

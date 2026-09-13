@@ -11,3 +11,12 @@ if not exist target\quest.jar (
   if exist mvnw.cmd (call mvnw.cmd -q -B -DskipTests package) else (call mvn -q -B -DskipTests package)
 )
 java -jar target\quest.jar %*
+set code=%errorlevel%
+if "%code%"=="5" (
+  echo [quest] solucao copiada: recompilando e rodando o exercicio...
+  if exist mvnw.cmd (call mvnw.cmd -q -B -DskipTests package) else (call mvn -q -B -DskipTests package)
+  java -jar target\quest.jar exercise %2 both
+  java -jar target\quest.jar verify %2
+  exit /b %errorlevel%
+)
+exit /b %code%

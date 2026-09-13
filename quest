@@ -26,4 +26,13 @@ if needs_build; then
   echo "[quest] building target/quest.jar (first run takes a minute)..."
   if [ -x ./mvnw ]; then ./mvnw -q -B -DskipTests package; else mvn -q -B -DskipTests package; fi
 fi
-exec java -jar "$JAR" "$@"
+java -jar "$JAR" "$@"
+code=$?
+if [ "$code" -eq 5 ] && { [ "${1:-}" = "solve" ] || [ "${1:-}" = "skip" ]; }; then
+  echo "[quest] solução copiada: recompilando e rodando o exercício..."
+  if [ -x ./mvnw ]; then ./mvnw -q -B -DskipTests package; else mvn -q -B -DskipTests package; fi
+  java -jar "$JAR" exercise "$2" both
+  java -jar "$JAR" verify "$2"
+  exit $?
+fi
+exit $code

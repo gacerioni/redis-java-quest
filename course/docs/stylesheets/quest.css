@@ -90,3 +90,13 @@
 .md-nav__link--active, .md-nav__link--active code { color: var(--quest-brand) !important; font-weight: 700; }
 .md-sidebar--primary .md-nav__item .md-nav__link--active { border-left: 3px solid var(--quest-brand); padding-left: 0.45rem; margin-left: -0.6rem; }
 .md-nav__link:hover { color: var(--quest-brand-dark); }
+
+/* Steps panel rendered from steps.js (same source as the CLI) */
+.quest-steps { margin: 1rem 0 1.6rem; padding: 0.9rem 1.1rem; border: 1px solid var(--quest-card-border); border-radius: 12px; background: var(--quest-card-bg); }
+.quest-steps-title { margin: 0 0 0.5rem; font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--quest-muted); font-weight: 700; }
+.quest-steps ol { margin: 0; padding-left: 1.3rem; }
+.quest-steps li { margin: 0.45rem 0; font-size: 0.82rem; line-height: 1.5; }
+.quest-steps li strong { display: block; }
+.quest-steps li code { display: inline-block; margin-top: 0.2rem; font-size: 0.72rem; }
+.quest-steps-foot { margin: 0.7rem 0 0; font-size: 0.75rem; color: var(--quest-muted); }
+.quest-steps-foot code { font-size: 0.7rem; }

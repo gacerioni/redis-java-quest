@@ -6,12 +6,16 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 export NO_COLOR=1
+export JAVA_HOME="${JAVA_HOME:-$HOME/Library/Java/JavaVirtualMachines/openjdk-21.0.2/Contents/Home}"
+export PATH="$JAVA_HOME/bin:$PATH"
 export REDIS_URL="${REDIS_URL:-redis://localhost:6379}"
 export QUEST_PREFIX="${QUEST_PREFIX:-solutions}"
-TMP=$(mktemp -d)
+TMP=$(mktemp -d "${TMPDIR:-/tmp}/quest-solutions.XXXXXX") || { echo "mktemp failed"; exit 1; }
 trap 'rm -rf "$TMP"' EXIT
-rsync -a --exclude target --exclude .git --exclude .venv --exclude course/site --exclude .claude --exclude .dev ./ "$TMP/"
-cd "$TMP"
+rsync -a --exclude target --exclude .git --exclude .venv --exclude course/site --exclude .claude --exclude .dev ./ "$TMP/" || { echo "rsync failed"; exit 1; }
+cd "$TMP" || { echo "cannot cd to $TMP"; exit 1; }
+[ -f pom.xml ] && [ -d solutions ] || { echo "temp copy incomplete, refusing to continue"; exit 1; }
+echo "working copy: $TMP"
 for d in solutions/l*/; do
   pkg=$(basename "$d")
   cp "$d"*.java "src/main/java/com/emberrealm/quest/lessons/$pkg/"
