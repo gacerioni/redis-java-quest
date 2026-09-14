@@ -21,7 +21,7 @@ COPYFILE_DISABLE=1 tar --no-xattrs -czf - -C course/site . | $SSH "sudo tar -xzf
 $SSH "sudo rm -rf $DEST/redisjava.old; [ -d $DEST/redisjava ] && sudo mv $DEST/redisjava $DEST/redisjava.old; sudo mv $DEST/redisjava.new $DEST/redisjava && sudo chown -R root:root /opt/redisjava && sudo chmod -R a+rX /opt/redisjava && sudo rm -rf $DEST/redisjava.old && ls $DEST/redisjava | head -5"
 
 echo "== verify"
-for path in "" "fundamentos/01-mapa-do-mundo/" "stylesheets/quest.css" "javascripts/progress.js" "search/search_index.json"; do
+for path in "" "trilha/" "trilha/02-conectar/" "fundamentos/01-mapa-do-mundo/" "stylesheets/quest.css" "javascripts/progress.js" "search/search_index.json"; do
   code=$(curl -s -o /dev/null -m 15 -w '%{http_code}' "https://platformengineer.io/redisjava/$path")
   printf '%-45s %s\n' "/redisjava/$path" "$code"
 done

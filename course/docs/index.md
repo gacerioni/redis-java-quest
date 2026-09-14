@@ -21,6 +21,7 @@ hide:
 </div>
 
 <a class="quest-btn" href="comece-aqui/">Comece aqui: do zero ao primeiro comando</a>
+<a class="quest-btn secondary" href="trilha/">Veio do workshop? Trilha de ~1 hora</a>
 
 </div>
 

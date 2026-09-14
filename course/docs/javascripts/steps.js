@@ -36,9 +36,14 @@ window.QUEST.steps = {
     "instruction" : "Rode o lab com um client e leia a saída: cada linha que começa com > é o comando Redis enviado, a linha seguinte é a resposta. Depois rode com o outro client e compare.",
     "command" : "./quest run 101-01 jedis"
   }, {
+    "id" : "mexa",
+    "title" : "Mexa no Redis: dez abates a mais para Kaelith",
+    "instruction" : "Sem Java agora. No Redis Insight (aba Workbench) ou no redis-cli, some 10 abates ao contador que o lab criou. Depois leia o valor com GET e repare que o Redis fez a conta em cima da String.",
+    "command" : "INCRBY {p}:kills:kaelith 10"
+  }, {
     "id" : "codigo",
     "title" : "Sua vez: escreva o código",
-    "instruction" : "Abra l101_01/JedisExercise.java (ou LettuceExercise.java), implemente o método marcado com Todo no lugar do throw new Todo(...) e rode o exercício. Travou? ./quest solve 101-01 copia a solução de referência.",
+    "instruction" : "Abra l101_01/JedisExercise.java (ou LettuceExercise.java), implemente o método castHeal no lugar do throw new Todo(...) e rode o exercício. Travou? ./quest solve 101-01 copia a solução de referência.",
     "command" : "./quest exercise 101-01 jedis"
   } ],
   "101-02" : [ {

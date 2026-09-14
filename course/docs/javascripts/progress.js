@@ -38,7 +38,9 @@
     if (!box) return;
     var id = box.getAttribute("data-lesson");
     var done = state.done[id];
-    var next = nextOf(id);
+    var next = box.hasAttribute("data-next-url")
+      ? { title: box.getAttribute("data-next-title") || "Próximo passo", url: box.getAttribute("data-next-url") }
+      : nextOf(id);
     box.innerHTML = "";
     var stateEl = document.createElement("div");
     stateEl.className = "state" + (done ? " done" : "");

@@ -1,0 +1,51 @@
+---
+lesson: 101-05
+title: "Sorted Set: ranking sem ORDER BY"
+minutes: 10
+kind: lab
+---
+
+# Sorted Set: ranking sem ORDER BY
+
+<p class="lesson-meta">Trilha do workshop · Passo 6 de 6 · ~10 min · <a href="../101-tipos/05-sorted-set/">versão completa</a></p>
+
+Cada membro de um Sorted Set é único e carrega um score; o Redis mantém a ordem a cada escrita. Top 10, posição de alguém, faixa de score: tudo O(log N), sem `ORDER BY` a cada consulta. É o tipo por trás de rankings, filas priorizadas e séries temporais simples.
+
+## Faça agora
+
+```bash
+./quest run 101-05 jedis
+./quest verify 101-05
+```
+
+## O que aconteceu
+
+O placar `quest:rank:xp` em operações (o código está em `l101_05/JedisLab.java`):
+
+```java
+List<Tuple> top = jedis.zrevrangeWithScores(rank, 0, 9);  // top 10, maior primeiro
+Long pos = jedis.zrevrank(rank, "vesper");                // posição (base zero)
+Double xp = jedis.zscore(rank, "vesper");                 // o score dela
+
+jedis.zincrby(rank, 5000, "vesper");                      // +5000 XP, atômico,
+                                                         // e o ranking se reordena sozinho
+
+long faixa = jedis.zcount(rank, 100_000, 600_000);        // quantos nessa faixa de XP
+List<Tuple> grupo = jedis.zrangeByScoreWithScores(rank, 100_000, 600_000);
+```
+
+`ZINCRBY` passa no fio como um comando só — não existe leitura, soma e reescrita. Por isso milhares de updates por segundo não criam condição de corrida.
+
+??? note "E o Lettuce?"
+
+    Mesmas operações; o tipo de retorno é `ScoredValue<String>` no lugar de `Tuple`, e faixas usam `Range.create(min, max)`. Rode `./quest run 101-05 lettuce` e compare.
+
+??? tip "Ver no Redis Insight"
+    Abra `quest:rank:xp`: os membros já aparecem ordenados por score. No Workbench, experimente `ZRANGE quest:rank:xp 0 9 REV WITHSCORES` (a forma moderna do `ZREVRANGE`).
+
+??? tip "Para ir além"
+    - Empate no score? Os membros ficam em ordem alfabética. Para desempatar por "quem chegou antes", embute o timestamp na parte fracionária do score.
+    - Ranking por temporada: uma chave por semana (`rank:xp:2026-w37`) com `EXPIRE`, em vez de zerar o global.
+    - Score é double: inteiros exatos até 2^53. Mais detalhes na [lição completa 101-05](../101-tipos/05-sorted-set.md).
+
+<div class="quest-complete" data-lesson="101-05" data-next-url="trilha/07-proximos-passos/" data-next-title="E agora?"></div>
