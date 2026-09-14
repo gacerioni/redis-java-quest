@@ -3,6 +3,7 @@ lesson: 101-02
 title: "Hash: campos que mudam sozinhos"
 minutes: 10
 kind: lab
+no_steps: true
 next_url: trilha/06-sorted-set/
 next_title: "Sorted Set: ranking sem ORDER BY"
 state_text: "Rodou o lab e o verify passou? Marque como concluído."

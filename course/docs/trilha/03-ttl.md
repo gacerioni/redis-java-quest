@@ -3,6 +3,7 @@ lesson: 100-04
 title: "Chaves que expiram sozinhas (TTL)"
 minutes: 10
 kind: lab
+no_steps: true
 next_url: trilha/04-string/
 next_title: "String: sessão, cooldown e contador"
 state_text: "Rodou o lab e o verify passou? Marque como concluído."

@@ -11,6 +11,7 @@
   {% if page.meta.lesson %}
   <div class="quest-complete" data-lesson="{{ page.meta.lesson }}" data-title="{{ page.meta.title }}"
     {%- if page.meta.next_url %} data-next-url="{{ page.meta.next_url }}" data-next-title="{{ page.meta.next_title }}"{% endif %}
-    {%- if page.meta.state_text %} data-state-text="{{ page.meta.state_text }}"{% endif %}></div>
+    {%- if page.meta.state_text %} data-state-text="{{ page.meta.state_text }}"{% endif %}
+    {%- if page.meta.no_steps %} data-no-steps="1"{% endif %}></div>
   {% endif %}
 {% endblock %}

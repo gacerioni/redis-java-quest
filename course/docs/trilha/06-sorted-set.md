@@ -3,6 +3,7 @@ lesson: 101-05
 title: "Sorted Set: ranking sem ORDER BY"
 minutes: 10
 kind: lab
+no_steps: true
 next_url: trilha/07-proximos-passos/
 next_title: "E agora?"
 state_text: "Rodou o lab e o verify passou? Marque como concluído."

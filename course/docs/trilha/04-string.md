@@ -3,6 +3,7 @@ lesson: 101-01
 title: "String: sessão, cooldown e contador"
 minutes: 15
 kind: lab
+no_steps: true
 next_url: trilha/05-hash/
 next_title: "Hash: campos que mudam sozinhos"
 state_text: "Lab verde e castHeal implementado? Marque como concluído."

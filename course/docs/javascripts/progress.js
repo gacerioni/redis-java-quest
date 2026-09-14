@@ -117,7 +117,7 @@
 
   function renderSteps() {
     var box = document.querySelector(".quest-complete");
-    if (!box || !Q.steps) return;
+    if (!box || !Q.steps || box.hasAttribute("data-no-steps")) return;
     var id = box.getAttribute("data-lesson");
     var steps = Q.steps[id];
     if (!steps || document.querySelector(".quest-steps")) return;

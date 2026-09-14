@@ -3,6 +3,7 @@ lesson: 100-02
 title: "Conectar e o primeiro SET/GET"
 minutes: 10
 kind: lab
+no_steps: true
 next_url: trilha/03-ttl/
 next_title: "Chaves que expiram sozinhas (TTL)"
 state_text: "Rodou o lab e o verify passou? Marque como concluído."
