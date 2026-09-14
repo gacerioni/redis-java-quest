@@ -3,6 +3,9 @@ lesson: 101-05
 title: "Sorted Set: ranking sem ORDER BY"
 minutes: 10
 kind: lab
+next_url: trilha/07-proximos-passos/
+next_title: "E agora?"
+state_text: "Rodou o lab e o verify passou? Marque como concluído."
 ---
 
 # Sorted Set: ranking sem ORDER BY
@@ -47,5 +50,3 @@ List<Tuple> grupo = jedis.zrangeByScoreWithScores(rank, 100_000, 600_000);
     - Empate no score? Os membros ficam em ordem alfabética. Para desempatar por "quem chegou antes", embute o timestamp na parte fracionária do score.
     - Ranking por temporada: uma chave por semana (`rank:xp:2026-w37`) com `EXPIRE`, em vez de zerar o global.
     - Score é double: inteiros exatos até 2^53. Mais detalhes na [lição completa 101-05](../101-tipos/05-sorted-set.md).
-
-<div class="quest-complete" data-lesson="101-05" data-next-url="trilha/07-proximos-passos/" data-next-title="E agora?"></div>

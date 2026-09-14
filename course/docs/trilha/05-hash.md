@@ -3,6 +3,9 @@ lesson: 101-02
 title: "Hash: campos que mudam sozinhos"
 minutes: 10
 kind: lab
+next_url: trilha/06-sorted-set/
+next_title: "Sorted Set: ranking sem ORDER BY"
+state_text: "Rodou o lab e o verify passou? Marque como concluído."
 ---
 
 # Hash: campos que mudam sozinhos
@@ -51,5 +54,3 @@ jedis.hexpire(buffs, 30, "haste");   // prazo por campo (Redis 7.4+):
     - Hash para objetos planos (perfil, configuração); JSON quando há aninhamento ou quando você quer buscar pelos campos — é a lição [JSON e FT.SEARCH](../201-busca/01-json-search.md).
     - No caminho quente, prefira `HMGET` a `HGETALL`: a resposta só trafega o que você pediu.
     - Mais detalhes: [lição completa 101-02](../101-tipos/02-hash.md).
-
-<div class="quest-complete" data-lesson="101-02" data-next-url="trilha/06-sorted-set/" data-next-title="Sorted Set: ranking sem ORDER BY"></div>

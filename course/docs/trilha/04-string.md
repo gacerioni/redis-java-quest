@@ -3,6 +3,9 @@ lesson: 101-01
 title: "String: sessão, cooldown e contador"
 minutes: 15
 kind: lab
+next_url: trilha/05-hash/
+next_title: "Hash: campos que mudam sozinhos"
+state_text: "Lab verde e castHeal implementado? Marque como concluído."
 ---
 
 # String: sessão, cooldown e contador
@@ -81,5 +84,3 @@ O resto do arquivo é o arnês: limpa as chaves, chama `castHeal` duas vezes e r
 ??? tip "Para ir além"
     - Faça `castHeal` devolver também quantos segundos faltam para curar de novo (`TTL`).
     - `SET NX EX` é o lock mais simples do Redis; em produção, libere apagando só se o valor ainda for o seu — detalhes na [lição completa 101-01](../101-tipos/01-string.md).
-
-<div class="quest-complete" data-lesson="101-01" data-next-url="trilha/05-hash/" data-next-title="Hash: campos que mudam sozinhos"></div>

@@ -44,7 +44,8 @@
     box.innerHTML = "";
     var stateEl = document.createElement("div");
     stateEl.className = "state" + (done ? " done" : "");
-    stateEl.textContent = done ? "Lição concluída em " + formatDate(done) : "Rodou as duas versões e o check passou? Marque como concluída.";
+    stateEl.textContent = done ? "Lição concluída em " + formatDate(done)
+      : (box.getAttribute("data-state-text") || "Rodou as duas versões e o check passou? Marque como concluída.");
     var actions = document.createElement("div");
     actions.className = "actions";
     var btn = document.createElement("button");

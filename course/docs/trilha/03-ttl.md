@@ -3,6 +3,9 @@ lesson: 100-04
 title: "Chaves que expiram sozinhas (TTL)"
 minutes: 10
 kind: lab
+next_url: trilha/04-string/
+next_title: "String: sessão, cooldown e contador"
+state_text: "Rodou o lab e o verify passou? Marque como concluído."
 ---
 
 # Chaves que expiram sozinhas (TTL)
@@ -58,5 +61,3 @@ E no fim o lab percorre todas as suas chaves `quest:*` com `SCAN` — página po
     - Convenção de nomes: `app:entidade:id` (`quest:session:7f3a9c`). O Insight agrupa por esses segmentos e `SCAN MATCH quest:session:*` acha só sessões.
     - Regra de produção: chave de sessão, cache ou lock **nasce com prazo**. Chave sem TTL só some se alguém apagar.
     - Detalhes de `EXPIRE ... NX/GT/LT`, `RENAME`, `UNLINK` e eviction: [lição completa 100-04](../fundamentos/04-chaves-ttl-scan.md).
-
-<div class="quest-complete" data-lesson="100-04" data-next-url="trilha/04-string/" data-next-title="String: sessão, cooldown e contador"></div>

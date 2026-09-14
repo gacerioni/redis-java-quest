@@ -3,6 +3,9 @@ lesson: setup
 title: "Setup: do zero ao PONG"
 minutes: 15
 kind: setup
+next_url: trilha/02-conectar/
+next_title: "Conectar e o primeiro SET/GET"
+state_text: "PONG no terminal? Marque como concluído."
 ---
 
 # Setup: do zero ao PONG
@@ -84,5 +87,3 @@ Isso grava o Ember Realm no seu Redis: itens em JSON, personagens em hash, ranki
 | Conexão recusada / timeout | Reveja host, porta, rede/VPN e se o banco está com ícone verde |
 | Erro de autenticação / `NOPERM` | Confira a URL completa (usuário, senha, `redis://` vs `rediss://`) |
 | `PONG` funciona, `seed` falha | O banco precisa ser Redis 8 com JSON/Search (o free tier e o Docker do curso são) |
-
-<div class="quest-complete" data-lesson="setup" data-next-url="trilha/02-conectar/" data-next-title="Conectar e o primeiro SET/GET"></div>

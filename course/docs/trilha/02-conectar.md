@@ -3,6 +3,9 @@ lesson: 100-02
 title: "Conectar e o primeiro SET/GET"
 minutes: 10
 kind: lab
+next_url: trilha/03-ttl/
+next_title: "Chaves que expiram sozinhas (TTL)"
+state_text: "Rodou o lab e o verify passou? Marque como concluído."
 ---
 
 # Conectar e o primeiro SET/GET
@@ -72,5 +75,3 @@ redis://default:S3nh4Forte@redis-12345.c308.sa-east-1-1.ec2.redns.redis-cloud.co
     - Edite a mensagem no `JedisLab` (mantenha o começo `Bem-vindo ao Ember Realm`), rode de novo e veja o valor mudar no Insight.
     - Regra de produção: **um client por aplicação**, nos dois casos. Criar client por requisição abre e fecha conexões o tempo todo.
     - Detalhes de pool, RESP2/RESP3 e como escolher entre os dois: [lição completa 100-02](../fundamentos/02-conectar.md) e [Jedis ou Lettuce?](../referencia/jedis-vs-lettuce.md)
-
-<div class="quest-complete" data-lesson="100-02" data-next-url="trilha/03-ttl/" data-next-title="Chaves que expiram sozinhas (TTL)"></div>
