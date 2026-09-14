@@ -87,3 +87,5 @@ Isso grava o Ember Realm no seu Redis: itens em JSON, personagens em hash, ranki
 | Conexão recusada / timeout | Reveja host, porta, rede/VPN e se o banco está com ícone verde |
 | Erro de autenticação / `NOPERM` | Confira a URL completa (usuário, senha, `redis://` vs `rediss://`) |
 | `PONG` funciona, `seed` falha | O banco precisa ser Redis 8 com JSON/Search (o free tier e o Docker do curso são) |
+
+Antes do próximo passo, 2 minutos: [como o `./quest` funciona](index.md#como-o-quest-funciona) — o que `run`, `verify` e `exercise` fazem de diferente.
