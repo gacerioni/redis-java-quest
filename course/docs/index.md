@@ -80,7 +80,7 @@ hide:
 
 1. **Faça a lição 0** (15 minutos): Java, Redis Cloud free sem cartão, clone do projeto, `.env` e o primeiro comando. Tudo roda contra um Redis de verdade, na nuvem, na região de São Paulo.
 2. **Clone o repositório e rode `./quest`.** Cada lição é um programa Java que você executa com Jedis e depois com Lettuce. A saída mostra o comando Redis enviado e o resultado.
-3. **Siga as lições e confira com `./quest check`.** O check inspeciona o seu Redis e diz o que está pronto e o que falta. Marque a lição como concluída: o progresso fica salvo no seu navegador.
+3. **Siga as lições e confira com `./quest verify`.** O verify inspeciona o seu Redis e diz o que está pronto e o que falta. Marque a lição como concluída: o progresso fica salvo no seu navegador.
 
 !!! tip "Uma hora para começar, o resto no seu ritmo"
     Fundamentos e Tipos cabem em uma hora. Eventos, Busca e Produção são a lição de casa: cada uma leva entre 30 e 60 minutos.

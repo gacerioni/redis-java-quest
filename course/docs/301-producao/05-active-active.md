@@ -9,9 +9,7 @@ kind: lab
 
 <p class="lesson-meta">Lição 301-05 · Lab · 12 min</p>
 
-## Por que isso importa
-
-O Ember Realm tem jogadores em São Paulo e em Lisboa, e nenhum dos dois aceita 200 ms de latência a cada golpe. Active-Active resolve do lado do servidor: um banco com uma réplica em cada região, todas aceitando leitura e escrita localmente, sincronizadas por CRDTs (tipos de dados replicados sem conflito) que reconciliam escritas concorrentes sem um coordenador central. Do lado da aplicação sobra uma pergunta: se a réplica da minha região cair, quem escolhe a outra? O Jedis 7+ responde com o `MultiDbClient`, e o Lettuce 7.7 traz a mesma ideia em preview.
+Usuários em São Paulo e Lisboa, nenhum aceitando 200 ms por operação. Active-Active resolve no servidor: réplicas em cada região, todas aceitando leitura e escrita locais, sincronizadas por CRDTs que reconciliam escritas concorrentes sem coordenador central. Na aplicação sobra uma pergunta: se a réplica da minha região cair, quem escolhe a outra? O Jedis 7+ responde com o `MultiDbClient`; o Lettuce 7.7 traz a ideia em preview.
 
 ```mermaid
 flowchart LR
@@ -25,7 +23,7 @@ flowchart LR
     appE -.->|"failover pelo client<br/>se east cair"| redisW
 ```
 
-## O que você vai fazer
+## O que o lab faz
 
 - Subir dois "datacenters" locais, `east` (6391) e `west` (6392), com `docker compose --profile failover up -d`
 - Configurar pesos 1.0 e 0.5, health check por `PING`, circuit breaker, retry e failback
@@ -33,13 +31,13 @@ flowchart LR
 - Derrubar o east em outro terminal, ver a troca, subir de novo e ver o failback
 - Repetir com o `MultiDbClient` do Lettuce (preview) e ler os eventos de troca no event bus
 
-## Rode
+## Faça agora
 
 ```bash
 docker compose --profile failover up -d
 ./quest run 301-05 jedis
-./quest run 301-05 lettuce
-./quest check 301-05
+./quest run 301-05 lettuce    # opcional: mesmo lab, outro client
+./quest verify 301-05
 ```
 
 Em outro terminal, enquanto o heartbeat roda:
@@ -126,27 +124,27 @@ Para usar dois bancos seus (duas réplicas Active-Active, por exemplo), defina `
     }
     ```
 
-## O que olhar no Redis Insight
+## No Redis Insight
 
 Adicione os dois bancos locais no Insight (`localhost:6391` e `localhost:6392`). Durante o heartbeat, `quest:heartbeat` avança no east; depois do `docker stop`, passa a avançar no west; depois do `docker start`, volta para o east. Como esses dois Redis locais não são Active-Active de verdade, o valor não se replica entre eles: essa é a lacuna que o Redis Cloud e o Redis Software fecham com CRDT. O banco do curso (`REDIS_URL`) só guarda o marcador `quest:progress:301-05` e o hash `quest:aa:clients`.
 
-## Por dentro
+??? note "Por dentro"
 
-| Comando | O que faz |
-|---|---|
-| `PING` | O health check de cada região, a cada 1 s, com 500 ms de timeout; no lab, uma rodada falhada (1 probe) já marca a região como doente |
-| `SET quest:heartbeat <instante>` | A escrita da aplicação, sempre na região ativa; com `retryOnFailover`, a que falhar no meio da troca é refeita na nova região |
-| `HEALTH_CHECK` (evento) | Motivo da troca quando o health check declara a região doente antes do circuit breaker |
-| `CIRCUIT_BREAKER` (evento) | Motivo da troca quando as próprias operações falham acima do limite da janela |
-| `FAILBACK` (evento) | A região de maior peso voltou e cumpriu a carência: o client volta para ela |
-| `HSET quest:aa:clients <client> <instante>` | Registra qual client rodou, para o `check` |
+    | Comando | O que faz |
+    |---|---|
+    | `PING` | O health check de cada região, a cada 1 s, com 500 ms de timeout; no lab, uma rodada falhada (1 probe) já marca a região como doente |
+    | `SET quest:heartbeat <instante>` | A escrita da aplicação, sempre na região ativa; com `retryOnFailover`, a que falhar no meio da troca é refeita na nova região |
+    | `HEALTH_CHECK` (evento) | Motivo da troca quando o health check declara a região doente antes do circuit breaker |
+    | `CIRCUIT_BREAKER` (evento) | Motivo da troca quando as próprias operações falham acima do limite da janela |
+    | `FAILBACK` (evento) | A região de maior peso voltou e cumpriu a carência: o client volta para ela |
+    | `HSET quest:aa:clients <client> <instante>` | Registra qual client rodou, para o `verify` |
 
-## Em produção
+??? tip "Em produção"
 
-- Active-Active é recurso do Redis Software e do Redis Cloud (plano Pro): cada região lê e escreve na sua réplica com latência local, e a replicação CRDT reconcilia contadores, conjuntos e strings sem coordenador. O RPO fica próximo de zero e o RTO passa a ser decisão do client: é para isso que servem os pesos, o health check e o failback.
-- `MultiDbClient` no Jedis (7+) usa resilience4j: no Maven, além de `resilience4j-circuitbreaker` e `resilience4j-retry`, inclua `resilience4j-all` (é de onde vem a classe `Decorators`). Os padrões do client são conservadores (janela do circuit breaker de 2 s com mínimo de 1000 falhas, carência de 60 s, failback a cada 2 min); o lab encurta tudo para caber em 6 s. Em produção, aumente a carência para evitar flapping e avalie `LagAwareStrategy` (preview, Redis Software) para não voltar para uma réplica atrasada.
-- Lettuce 7.7 traz `io.lettuce.core.failover.MultiDbClient` em preview, com a mesma semântica (pesos, circuit breaker por banco, `PingStrategy`, failback e eventos no event bus). A alternativa sem código fica no servidor: o Redis Cloud redireciona dinamicamente o endpoint da réplica Active-Active que caiu para a réplica saudável, e é por isso que a [lição 301-01](01-timeouts-pool-retry.md) mandou desligar o cache de DNS da JVM. SCH ([lição 301-04](04-smart-client-handoffs.md)) fica desligado quando o client está em modo failover.
+    - Active-Active é recurso do Redis Software e do Redis Cloud (plano Pro): cada região lê e escreve na sua réplica com latência local, e a replicação CRDT reconcilia contadores, conjuntos e strings sem coordenador. O RPO fica próximo de zero e o RTO passa a ser decisão do client: é para isso que servem os pesos, o health check e o failback.
+    - `MultiDbClient` no Jedis (7+) usa resilience4j: no Maven, além de `resilience4j-circuitbreaker` e `resilience4j-retry`, inclua `resilience4j-all` (é de onde vem a classe `Decorators`). Os padrões do client são conservadores (janela do circuit breaker de 2 s com mínimo de 1000 falhas, carência de 60 s, failback a cada 2 min); o lab encurta tudo para caber em 6 s. Em produção, aumente a carência para evitar flapping e avalie `LagAwareStrategy` (preview, Redis Software) para não voltar para uma réplica atrasada.
+    - Lettuce 7.7 traz `io.lettuce.core.failover.MultiDbClient` em preview, com a mesma semântica (pesos, circuit breaker por banco, `PingStrategy`, failback e eventos no event bus). A alternativa sem código fica no servidor: o Redis Cloud redireciona dinamicamente o endpoint da réplica Active-Active que caiu para a réplica saudável, e é por isso que a [lição 301-01](01-timeouts-pool-retry.md) mandou desligar o cache de DNS da JVM. SCH ([lição 301-04](04-smart-client-handoffs.md)) fica desligado quando o client está em modo failover.
 
-## Desafio
+??? tip "Desafio"
 
-Inverta os pesos (west 1.0, east 0.5) e confirme que o heartbeat começa no west. Depois derrube os dois datacenters durante o heartbeat: o Jedis lança `JedisTemporarilyNotAvailableException` a cada batida enquanto procura uma região saudável, e o Lettuce publica `AllDatabasesUnhealthyEvent` no event bus. Suba um deles e veja a recuperação.
+    Inverta os pesos (west 1.0, east 0.5) e confirme que o heartbeat começa no west. Depois derrube os dois datacenters durante o heartbeat: o Jedis lança `JedisTemporarilyNotAvailableException` a cada batida enquanto procura uma região saudável, e o Lettuce publica `AllDatabasesUnhealthyEvent` no event bus. Suba um deles e veja a recuperação.

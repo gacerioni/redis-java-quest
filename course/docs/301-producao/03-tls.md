@@ -9,23 +9,21 @@ kind: lab
 
 <p class="lesson-meta">Lição 301-03 · Lab · 8 min</p>
 
-## Por que isso importa
+Em produção o Redis fica atrás de TLS: a URL vira `rediss://`, o client valida o certificado do servidor e o resto do código não muda. Esta é a única lição do curso que depende de plano pago — o plano free do Redis Cloud não oferece TLS. Sem `REDIS_TLS_URL`, o lab explica o que você faria e se marca como pulado.
 
-Senhas de jogador, tokens de sessão e o ouro do reino cruzam a rede a cada comando. Em produção o Redis fica atrás de TLS: a URL vira `rediss://`, o client valida o certificado do servidor e o resto do código não muda. Esta é a única lição do curso que depende de um plano pago: o plano free do Redis Cloud (30 MB) não oferece TLS. Sem `REDIS_TLS_URL`, o lab explica o que você faria e se marca como pulado.
-
-## O que você vai fazer
+## O que o lab faz
 
 - Entender o que muda no `rediss://`: certificado, CA e verificação do servidor
 - Ver onde o Redis Cloud entrega o `redis_ca.pem` e por que a JVM já confia nele
 - Com `REDIS_TLS_URL` definida: conectar, `PING`, `SET` e `GET` em `quest:tls:probe` nos dois clients
 - Opcional: apontar `REDIS_TLS_CA_PEM` para uma CA própria e ver os dois clients confiarem nela
 
-## Rode
+## Faça agora
 
 ```bash
 ./quest run 301-03 jedis
-./quest run 301-03 lettuce
-./quest check 301-03
+./quest run 301-03 lettuce    # opcional: mesmo lab, outro client
+./quest verify 301-03
 ```
 
 Com um banco pago, coloque no `.env` antes de rodar:
@@ -82,26 +80,26 @@ REDIS_TLS_CA_PEM=/caminho/redis_ca.pem
     }
     ```
 
-## O que olhar no Redis Insight
+## No Redis Insight
 
 Adicione o banco TLS no Insight marcando "Use TLS" e, se a CA for própria, colando o conteúdo do `redis_ca.pem` em "CA Certificate". No Browser, `quest:tls:probe` aparece com o instante da última rodada. No Workbench, `INFO server` responde normalmente: o TLS é invisível para os comandos, e essa é exatamente a ideia. Sem `REDIS_TLS_URL`, a lição não cria chave nenhuma: só o marcador `quest:progress:301-03` com `tls=skipped`.
 
-## Por dentro
+??? note "Por dentro"
 
-| Comando | O que faz |
-|---|---|
-| `rediss://` | Mesma URL, com um `s`: o client abre TLS antes do handshake do Redis |
-| `PING` | Primeiro comando dentro do túnel: se o certificado não fosse confiável, ele nem chegaria |
-| `SET quest:tls:probe <instante>` | Prova de escrita pela conexão segura |
-| `GET quest:tls:probe` | Prova de leitura pela mesma conexão |
-| `HSET quest:progress:301-03 tls ok` | O marcador que o `check` lê (`ok` ou `skipped`) |
+    | Comando | O que faz |
+    |---|---|
+    | `rediss://` | Mesma URL, com um `s`: o client abre TLS antes do handshake do Redis |
+    | `PING` | Primeiro comando dentro do túnel: se o certificado não fosse confiável, ele nem chegaria |
+    | `SET quest:tls:probe <instante>` | Prova de escrita pela conexão segura |
+    | `GET quest:tls:probe` | Prova de leitura pela mesma conexão |
+    | `HSET quest:progress:301-03 tls ok` | O marcador que o `verify` lê (`ok` ou `skipped`) |
 
-## Em produção
+??? tip "Em produção"
 
-- Redis Cloud: TLS está nos planos pagos Essentials e Pro. Ative na configuração do banco e baixe o `redis_ca.pem` no console. O bundle traz uma raiz GlobalSign, pública e já presente no truststore da JVM, mais as CAs legadas do Redis Cloud; por isso `RedisClient.create("rediss://...")` funciona sem configurar nada. TLS mútuo (certificado do client) é opcional e só entra se você ligar a autenticação de client no banco.
-- Sem `SslOptions`, o Jedis usa o truststore padrão da JVM; para uma CA própria, o caminho documentado é `keytool -importcert` gerando um `truststore.jks` e `SslOptions.builder().truststore(new File("truststore.jks"), senha.toCharArray())`. O lab monta o truststore em memória a partir do PEM para não depender do `keytool`.
-- Mantenha a verificação do certificado ligada (o padrão nos dois clients). Desligar resolve o erro do dia e abre a porta para um ataque de interceptação amanhã.
+    - Redis Cloud: TLS está nos planos pagos Essentials e Pro. Ative na configuração do banco e baixe o `redis_ca.pem` no console. O bundle traz uma raiz GlobalSign, pública e já presente no truststore da JVM, mais as CAs legadas do Redis Cloud; por isso `RedisClient.create("rediss://...")` funciona sem configurar nada. TLS mútuo (certificado do client) é opcional e só entra se você ligar a autenticação de client no banco.
+    - Sem `SslOptions`, o Jedis usa o truststore padrão da JVM; para uma CA própria, o caminho documentado é `keytool -importcert` gerando um `truststore.jks` e `SslOptions.builder().truststore(new File("truststore.jks"), senha.toCharArray())`. O lab monta o truststore em memória a partir do PEM para não depender do `keytool`.
+    - Mantenha a verificação do certificado ligada (o padrão nos dois clients). Desligar resolve o erro do dia e abre a porta para um ataque de interceptação amanhã.
 
-## Desafio
+??? tip "Desafio"
 
-Suba um Redis com TLS na sua máquina (`redis-server --port 0 --tls-port 6395` com um certificado próprio para `localhost`), aponte `REDIS_TLS_URL=rediss://localhost:6395` e rode sem `REDIS_TLS_CA_PEM`: os dois clients recusam o certificado autoassinado. Depois defina `REDIS_TLS_CA_PEM` com a sua CA e veja o `PONG` chegar.
+    Suba um Redis com TLS na sua máquina (`redis-server --port 0 --tls-port 6395` com um certificado próprio para `localhost`), aponte `REDIS_TLS_URL=rediss://localhost:6395` e rode sem `REDIS_TLS_CA_PEM`: os dois clients recusam o certificado autoassinado. Depois defina `REDIS_TLS_CA_PEM` com a sua CA e veja o `PONG` chegar.

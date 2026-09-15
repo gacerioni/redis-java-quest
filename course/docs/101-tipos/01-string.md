@@ -9,9 +9,7 @@ kind: lab
 
 <p class="lesson-meta">Lição 101-01 · Lab + sua vez · 15 min</p>
 
-## Por que isso importa
-
-Kaelith faz login, lança Bola de Fogo e derruba goblins. Cada uma dessas ações vira uma chave do tipo String, o tipo mais simples do Redis: um valor por chave, com prazo de vida opcional. A graça está nos detalhes: `SET ... EX` cria uma sessão que morre sozinha, `SET ... NX EX` implementa um cooldown sem condição de corrida e `INCR` soma abates sem ler o valor antes. Três problemas clássicos de backend (sessão, lock com prazo, contador) resolvidos com meia dúzia de comandos.
+Sessão, cooldown, contador: três problemas clássicos de backend resolvidos com o tipo mais simples do Redis — uma String, um valor por chave, com prazo de vida opcional. A graça está nos detalhes: `SET ... EX` cria uma chave que morre sozinha, `SET ... NX EX` implementa um cooldown sem condição de corrida e `INCR` soma sem ler o valor antes.
 
 ## Veja funcionando
 
@@ -19,7 +17,7 @@ Primeiro você assiste. O comando abaixo roda um lab pronto (`JedisLab.java` ou 
 
 ```bash
 ./quest run 101-01 jedis
-./quest run 101-01 lettuce
+./quest run 101-01 lettuce    # opcional: mesmo lab, outro client
 ```
 
 O que reparar na saída:
@@ -101,7 +99,7 @@ Abra o arquivo do client que você escolheu e implemente o método `castHeal`, q
 
 Regras do método:
 
-| Regra | Como o check confere |
+| Regra | Como o verify confere |
 |---|---|
 | A cura só sai se a chave `{p}:cooldown:kaelith:heal` ainda não existe | duas curas seguidas: só a primeira pode sair |
 | Quando sai, a chave nasce com TTL de 8 segundos | `TTL` da chave entre 0 e 8 |
@@ -109,37 +107,37 @@ Regras do método:
 | Checar e gravar acontecem em um único comando | é a mesma ideia do `SET ... NX EX` que você viu no lab |
 | Devolve `true` quando a cura saiu, `false` em cooldown | a saída do exercício mostra os dois valores |
 
-O resto do arquivo é o arnês: limpa as chaves, chama `castHeal` duas vezes seguidas, mostra o resultado e registra o exercício para o check. Não precisa mexer nele.
+O resto do arquivo é o arnês: limpa as chaves, chama `castHeal` duas vezes seguidas, mostra o resultado e registra o exercício para o verify. Não precisa mexer nele.
 
 ```bash
 ./quest exercise 101-01 jedis      # ou lettuce
-./quest check 101-01
+./quest verify 101-01
 ```
 
-Enquanto o método não estiver implementado, o `exercise` para com o aviso "Sua vez: implemente castHeal" e o `check` marca a parte "Sua vez" em vermelho. Quando passar, o `check` mostra as três linhas verdes da sua vez. Travou? `./quest solve 101-01 --yes` copia a solução de referência por cima do seu arquivo.
+Enquanto o método não estiver implementado, o `exercise` para com o aviso "Sua vez: implemente castHeal" e o `verify` marca a parte "Sua vez" em vermelho. Quando passar, o `verify` mostra as três linhas verdes da sua vez. Travou? `./quest solve 101-01 --yes` copia a solução de referência por cima do seu arquivo.
 
 Quer ir além: faça `castHeal` devolver também quantos segundos faltam para poder curar de novo (`TTL`) e mostre isso na saída.
 
-## O que olhar no Redis Insight
+## No Redis Insight
 
 Depois do lab, filtre por `quest:*` no Browser: `quest:session:kaelith` mostra o TTL descendo em tempo real; `quest:cooldown:kaelith:fireball` aparece e some em 5 segundos; `quest:kills:kaelith` guarda `5`. Depois da sua vez, `quest:cooldown:kaelith:heal` e `quest:heals:kaelith` aparecem ao lado. No Profiler, rode o lab de novo e veja a sequência exata de `SET`, `INCR`, `GETDEL` e `MGET` que o client enviou.
 
-## Por dentro
+??? note "Por dentro"
 
-| Comando | O que faz |
-|---|---|
-| `SET key value EX 1800` | Grava e já agenda a expiração em 1800 s |
-| `SET key value NX EX 5` | Só grava se a chave não existe (NX), com TTL de 5 s (EX); devolve `nil` se já existia |
-| `TTL key` | Segundos restantes; `-1` sem prazo, `-2` chave não existe |
-| `INCR key`, `INCRBY key n` | Soma atômica no valor numérico da String |
-| `GETDEL key` | Devolve o valor e apaga a chave na mesma operação |
-| `MGET k1 k2 k3` | Vários valores em uma ida ao servidor |
+    | Comando | O que faz |
+    |---|---|
+    | `SET key value EX 1800` | Grava e já agenda a expiração em 1800 s |
+    | `SET key value NX EX 5` | Só grava se a chave não existe (NX), com TTL de 5 s (EX); devolve `nil` se já existia |
+    | `TTL key` | Segundos restantes; `-1` sem prazo, `-2` chave não existe |
+    | `INCR key`, `INCRBY key n` | Soma atômica no valor numérico da String |
+    | `GETDEL key` | Devolve o valor e apaga a chave na mesma operação |
+    | `MGET k1 k2 k3` | Vários valores em uma ida ao servidor |
 
-## Em produção
+??? tip "Em produção"
 
-- Sessão com TTL dispensa job de limpeza; renove o prazo com `EXPIRE` a cada requisição válida (sliding session).
-- `SET NX EX` é o lock mais simples do Redis; para liberar com segurança, apague só se o valor ainda for o seu (script Lua ou `DEL` condicional), nunca um `DEL` cego.
-- Contadores com `INCR` são atômicos mesmo com dezenas de instâncias da aplicação escrevendo ao mesmo tempo. Nada de `GET`, somar em Java e `SET` de volta.
+    - Sessão com TTL dispensa job de limpeza; renove o prazo com `EXPIRE` a cada requisição válida (sliding session).
+    - `SET NX EX` é o lock mais simples do Redis; para liberar com segurança, apague só se o valor ainda for o seu (script Lua ou `DEL` condicional), nunca um `DEL` cego.
+    - Contadores com `INCR` são atômicos mesmo com dezenas de instâncias da aplicação escrevendo ao mesmo tempo. Nada de `GET`, somar em Java e `SET` de volta.
 
 ??? note "Ver a solução de referência"
 

@@ -9,11 +9,9 @@ kind: lab
 
 <p class="lesson-meta">Lição 100-03 · Lab · 6 min</p>
 
-## Por que isso importa
+O `./quest seed` colocou 42 itens, 12 personagens e 6 zonas no seu Redis, e o Redis Insight é a interface oficial para olhar tudo isso: o Browser mostra as chaves em árvore, o Workbench roda comandos com a documentação ao lado e o Profiler mostra, ao vivo, o que o seu client Java está mandando. O lab faz em Java o mesmo passeio do Browser (`SCAN` para achar as chaves, `TYPE` para ver o que mora em cada uma), para você comparar as duas visões.
 
-Ninguém administra um reino que não consegue ver. O `./quest seed` acabou de colocar 42 itens, 12 personagens e 6 zonas no seu Redis, e o Redis Insight é a interface oficial para olhar tudo isso: o Browser mostra as chaves em árvore, o Workbench roda comandos com documentação ao lado e o Profiler mostra, ao vivo, o que o seu client Java está mandando. Nesta lição o lab faz em Java o mesmo passeio que você faz no Browser (`SCAN` para achar as chaves, `TYPE` para saber o que mora em cada uma), para você comparar as duas visões.
-
-## O que você vai fazer
+## O que o lab faz
 
 - Abrir o Redis Insight apontando para o mesmo banco do `REDIS_URL`
 - Filtrar o Browser pelo seu prefixo e reconhecer os cinco tipos do seed
@@ -21,12 +19,12 @@ Ninguém administra um reino que não consegue ver. O `./quest seed` acabou de c
 - Gravar o marco `quest:tour:visited` e achar a chave no Browser
 - Ligar o Profiler e ver os comandos do lab passando
 
-## Rode
+## Faça agora
 
 ```bash
 ./quest run 100-03 jedis
-./quest run 100-03 lettuce
-./quest check 100-03
+./quest run 100-03 lettuce    # opcional: mesmo lab, outro client
+./quest verify 100-03
 ```
 
 ## O código
@@ -103,7 +101,7 @@ zones      set             1   quest:zones
 !!! note "Por que 10 sets de conquistas e não 12?"
     Marisol e Vesper acabaram de chegar ao reino e ainda não têm conquistas. Um set vazio não existe no Redis: a chave só aparece quando tem o primeiro membro.
 
-## O que olhar no Redis Insight
+## No Redis Insight
 
 **Como abrir.** No Redis Cloud Essentials, entre no console, abra o seu banco e clique em **Launch Redis Insight web**: o Insight abre já conectado, sem instalar nada. Com o Docker do curso, o Insight está em [http://localhost:5540](http://localhost:5540); na primeira vez, adicione o banco com host `redis` e porta `6379` (é o nome do serviço no `docker-compose.yml`; `localhost` dentro do container do Insight não é o seu Redis). Para qualquer outro banco, clique em **Add Redis database** e cole a mesma URL do seu `REDIS_URL`.
 
@@ -113,22 +111,22 @@ zones      set             1   quest:zones
 
 **Profiler.** Clique em **Profiler** no rodapé, em **Start Profiler**, e rode o lab de novo em outro terminal. Você vai ver o `UNLINK`, as páginas do `SCAN` (repare nos cursores que mudam), os `TYPE` um atrás do outro e o `SET` final. É a forma mais rápida de descobrir o que uma biblioteca faz por baixo dos panos.
 
-## Por dentro
+??? note "Por dentro"
 
-| Comando | O que faz |
-|---|---|
-| `SCAN cursor MATCH padrão COUNT n` | Devolve uma página de chaves e o próximo cursor; cursor `0` de volta encerra a iteração. `COUNT` é uma dica de tamanho de página, não um limite exato |
-| `TYPE chave` | Diz o tipo: `string`, `hash`, `set`, `zset`, `list`, `stream`, e nomes internos de módulos como `ReJSON-RL` (JSON) |
-| `UNLINK chave` | Apaga a chave devolvendo a memória em segundo plano; é o `DEL` que não bloqueia o servidor em chaves grandes |
-| `SET chave valor` | Grava uma STRING; aqui, o instante da visita |
-| `JSON.GET chave $.campo` | Lê um pedaço de um documento JSON (no Workbench, para espiar um item) |
+    | Comando | O que faz |
+    |---|---|
+    | `SCAN cursor MATCH padrão COUNT n` | Devolve uma página de chaves e o próximo cursor; cursor `0` de volta encerra a iteração. `COUNT` é uma dica de tamanho de página, não um limite exato |
+    | `TYPE chave` | Diz o tipo: `string`, `hash`, `set`, `zset`, `list`, `stream`, e nomes internos de módulos como `ReJSON-RL` (JSON) |
+    | `UNLINK chave` | Apaga a chave devolvendo a memória em segundo plano; é o `DEL` que não bloqueia o servidor em chaves grandes |
+    | `SET chave valor` | Grava uma STRING; aqui, o instante da visita |
+    | `JSON.GET chave $.campo` | Lê um pedaço de um documento JSON (no Workbench, para espiar um item) |
 
-## Em produção
+??? tip "Em produção"
 
-- Conecte o Insight à produção com um usuário ACL só de leitura. O Browser é seguro (ele usa `SCAN` com páginas pequenas), mas um clique errado em **Delete** apaga chave de verdade.
-- O Profiler é um `MONITOR` por baixo: ele recebe uma cópia de cada comando do servidor. Ligue por alguns segundos para investigar e desligue; nunca deixe rodando em um banco movimentado.
-- Um `TYPE` por chave, como o lab fez, custa uma ida e volta por chave. Para milhares de chaves, junte os `TYPE` em um pipeline (lição [100-05](05-pipeline.md)) ou use o **Database analysis** do Insight, que amostra o banco em vez de varrer tudo.
+    - Conecte o Insight à produção com um usuário ACL só de leitura. O Browser é seguro (ele usa `SCAN` com páginas pequenas), mas um clique errado em **Delete** apaga chave de verdade.
+    - O Profiler é um `MONITOR` por baixo: ele recebe uma cópia de cada comando do servidor. Ligue por alguns segundos para investigar e desligue; nunca deixe rodando em um banco movimentado.
+    - Um `TYPE` por chave, como o lab fez, custa uma ida e volta por chave. Para milhares de chaves, junte os `TYPE` em um pipeline (lição [100-05](05-pipeline.md)) ou use o **Database analysis** do Insight, que amostra o banco em vez de varrer tudo.
 
-## Desafio
+??? tip "Desafio"
 
-Mude o `COUNT` do `SCAN` no lab (o `count(100)` do Jedis ou o `limit(100)` do Lettuce) para `10` e rode de novo: a linha "chaves com o prefixo" vai mostrar muito mais páginas. Agora troque para `1000`: quase sempre uma página só. O total de chaves não muda; só o número de idas e voltas até o cursor voltar a zero.
+    Mude o `COUNT` do `SCAN` no lab (o `count(100)` do Jedis ou o `limit(100)` do Lettuce) para `10` e rode de novo: a linha "chaves com o prefixo" vai mostrar muito mais páginas. Agora troque para `1000`: quase sempre uma página só. O total de chaves não muda; só o número de idas e voltas até o cursor voltar a zero.

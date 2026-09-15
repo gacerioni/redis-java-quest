@@ -9,11 +9,9 @@ kind: lab
 
 <p class="lesson-meta">Lição 100-05 · Lab · 8 min</p>
 
-## Por que isso importa
+Gravar 100 itens um por vez são 100 idas e voltas até o Redis: com 1 ms de rede, um décimo de segundo em que o servidor quase não trabalha e o seu código só espera. Um pipeline manda os 100 comandos de uma vez e lê as respostas depois. E quando duas escritas precisam acontecer juntas ou não acontecer — transferir ouro de uma conta para outra — `MULTI`/`EXEC` garante que ninguém veja o meio do caminho.
 
-O chefe das Catacumbas Rubras caiu e derrubou 100 itens no chão. Gravar um por vez significa 100 idas e voltas até o Redis: com 1 ms de rede, é um décimo de segundo em que o servidor quase não trabalha e o seu código só espera. Um pipeline manda os 100 comandos de uma vez e lê as 100 respostas depois. E quando duas escritas precisam acontecer juntas ou não acontecer (Brom paga 100 de ouro à Nix), `MULTI`/`EXEC` garante que ninguém veja o meio do caminho.
-
-## O que você vai fazer
+## O que o lab faz
 
 - Gravar 100 drops `quest:loot:{n}`, um `SET` por vez, medindo o tempo
 - Apagar tudo com um único `UNLINK` e gravar os mesmos 100 em um pipeline, medindo de novo
@@ -21,12 +19,12 @@ O chefe das Catacumbas Rubras caiu e derrubou 100 itens no chão. Gravar um por 
 - Transferir 100 de ouro entre dois personagens com `MULTI`/`EXEC`
 - Separar os dois conceitos: pipeline é rede, transação é atomicidade
 
-## Rode
+## Faça agora
 
 ```bash
 ./quest run 100-05 jedis
-./quest run 100-05 lettuce
-./quest check 100-05
+./quest run 100-05 lettuce    # opcional: mesmo lab, outro client
+./quest verify 100-05
 ```
 
 ## O código
@@ -119,30 +117,30 @@ O que o console mostra, rodando contra um Redis local (contra o Redis Cloud a di
 !!! note "Por que o Lettuce usa a API assíncrona na transação?"
     Dentro de `MULTI`, o servidor responde `QUEUED` a cada comando e só entrega os resultados no `EXEC`. Na API síncrona do Lettuce, `hincrby` devolveria `null`; na assíncrona, cada comando devolve um future que completa quando o `EXEC` chega. No Jedis o mesmo papel é do `Response<T>`: vazio até o `exec()`.
 
-## O que olhar no Redis Insight
+## No Redis Insight
 
 Ligue o **Profiler** antes de rodar o lab. Na rodada 1 os 100 `SET` chegam espaçados, um a um; na rodada 2 chegam em rajada, todos no mesmo instante. Depois vêm `MULTI`, dois `HINCRBY` e `EXEC`. No **Browser**, filtre `quest:loot:*` e veja os 100 drops (cada um guarda o id de um item do catálogo); em `quest:player:brom` o campo `gold` está em 15100 e em `quest:player:nix` em 10000.
 
-## Por dentro
+??? note "Por dentro"
 
-| Comando | O que faz |
-|---|---|
-| pipeline | Não é um comando: é o client enviar vários comandos sem esperar cada resposta, e ler todas depois. O servidor executa na ordem, um por vez, como sempre |
-| `MULTI` | Abre uma transação: os comandos seguintes entram em fila e respondem `QUEUED` |
-| `EXEC` | Executa a fila inteira de uma vez, sem nenhum outro cliente entre os comandos, e devolve a lista de respostas |
-| `DISCARD` | Esvazia a fila e sai do `MULTI` sem executar |
-| `WATCH chave` | Antes do `MULTI`: se a chave mudar até o `EXEC`, a transação é abortada (`EXEC` devolve nulo). É o lock otimista do Redis |
-| `HINCRBY chave campo n` | Soma `n` ao campo numérico de um hash (negativo subtrai) e devolve o novo valor |
-| `UNLINK chave [chave ...]` | Apaga várias chaves em um comando, liberando memória em segundo plano |
+    | Comando | O que faz |
+    |---|---|
+    | pipeline | Não é um comando: é o client enviar vários comandos sem esperar cada resposta, e ler todas depois. O servidor executa na ordem, um por vez, como sempre |
+    | `MULTI` | Abre uma transação: os comandos seguintes entram em fila e respondem `QUEUED` |
+    | `EXEC` | Executa a fila inteira de uma vez, sem nenhum outro cliente entre os comandos, e devolve a lista de respostas |
+    | `DISCARD` | Esvazia a fila e sai do `MULTI` sem executar |
+    | `WATCH chave` | Antes do `MULTI`: se a chave mudar até o `EXEC`, a transação é abortada (`EXEC` devolve nulo). É o lock otimista do Redis |
+    | `HINCRBY chave campo n` | Soma `n` ao campo numérico de um hash (negativo subtrai) e devolve o novo valor |
+    | `UNLINK chave [chave ...]` | Apaga várias chaves em um comando, liberando memória em segundo plano |
 
-## Em produção
+??? tip "Em produção"
 
-- Pipeline não é atômico e não é transação: outro cliente pode escrever entre dois comandos seus, e um erro no meio não desfaz os anteriores. Ele economiza rede. Junte lotes de algumas centenas de comandos (o Redis guarda todas as respostas em memória até você ler); para milhões de escritas, faça vários pipelines.
-- `MULTI`/`EXEC` não tem rollback: se um comando falhar na execução (um `INCR` em uma string que não é número, por exemplo), os outros continuam valendo. A atomicidade é "ninguém no meio", não "tudo ou nada em caso de erro". Erros de sintaxe, por outro lado, abortam o `EXEC` inteiro.
-- Em um banco com vários shards (Redis Cloud fora do plano de um shard só, ou Redis OSS em cluster), todas as chaves de uma transação precisam estar no mesmo slot. Use hash tags: `quest:{guilda:ordem}:player:brom` e `quest:{guilda:ordem}:player:nix` caem no mesmo shard porque só o que está entre chaves entra no cálculo do slot. Já `UNLINK` e `MGET` com chaves em slots diferentes o proxy do Redis Cloud resolve para você.
-- No Jedis, o pipeline e a transação seguram uma conexão do pool até o `sync()` ou o `exec()`; no Lettuce, só desligue o auto-flush em uma conexão dedicada, nunca na conexão compartilhada da aplicação. Na maior parte dos casos, no Lettuce, basta disparar os comandos assíncronos e aguardar os futures: a conexão já os escreve em lote.
-- `MULTI` no Lettuce também pede conexão dedicada: em uma conexão compartilhada, os comandos das outras threads entrariam na sua fila entre o `MULTI` e o `EXEC`. O lab usa uma conexão só dele por isso.
+    - Pipeline não é atômico e não é transação: outro cliente pode escrever entre dois comandos seus, e um erro no meio não desfaz os anteriores. Ele economiza rede. Junte lotes de algumas centenas de comandos (o Redis guarda todas as respostas em memória até você ler); para milhões de escritas, faça vários pipelines.
+    - `MULTI`/`EXEC` não tem rollback: se um comando falhar na execução (um `INCR` em uma string que não é número, por exemplo), os outros continuam valendo. A atomicidade é "ninguém no meio", não "tudo ou nada em caso de erro". Erros de sintaxe, por outro lado, abortam o `EXEC` inteiro.
+    - Em um banco com vários shards (Redis Cloud fora do plano de um shard só, ou Redis OSS em cluster), todas as chaves de uma transação precisam estar no mesmo slot. Use hash tags: `quest:{guilda:ordem}:player:brom` e `quest:{guilda:ordem}:player:nix` caem no mesmo shard porque só o que está entre chaves entra no cálculo do slot. Já `UNLINK` e `MGET` com chaves em slots diferentes o proxy do Redis Cloud resolve para você.
+    - No Jedis, o pipeline e a transação seguram uma conexão do pool até o `sync()` ou o `exec()`; no Lettuce, só desligue o auto-flush em uma conexão dedicada, nunca na conexão compartilhada da aplicação. Na maior parte dos casos, no Lettuce, basta disparar os comandos assíncronos e aguardar os futures: a conexão já os escreve em lote.
+    - `MULTI` no Lettuce também pede conexão dedicada: em uma conexão compartilhada, os comandos das outras threads entrariam na sua fila entre o `MULTI` e o `EXEC`. O lab usa uma conexão só dele por isso.
 
-## Desafio
+??? tip "Desafio"
 
-Acrescente dentro do `MULTI` um terceiro comando que vai falhar na execução, por exemplo `tx.incr(bromKey)` no Jedis ou `async.incr(bromKey)` no Lettuce (a ficha é um hash, não uma string). Rode e veja: o `EXEC` devolve um erro `WRONGTYPE` nessa posição, mas os dois `HINCRBY` foram aplicados mesmo assim. Essa é a diferença entre "atômico" e "com rollback".
+    Acrescente dentro do `MULTI` um terceiro comando que vai falhar na execução, por exemplo `tx.incr(bromKey)` no Jedis ou `async.incr(bromKey)` no Lettuce (a ficha é um hash, não uma string). Rode e veja: o `EXEC` devolve um erro `WRONGTYPE` nessa posição, mas os dois `HINCRBY` foram aplicados mesmo assim. Essa é a diferença entre "atômico" e "com rollback".

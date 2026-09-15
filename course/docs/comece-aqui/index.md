@@ -104,10 +104,10 @@ Na página do banco no Redis Cloud, clique em **Launch Redis Insight web** (sem 
 ```bash
 ./quest run 100-01 jedis      # roda a lição com Jedis
 ./quest run 100-01 lettuce    # roda a mesma lição com Lettuce
-./quest check 100-01          # inspeciona o seu Redis e diz o que falta
+./quest verify 100-01          # inspeciona o seu Redis e diz o que falta
 ```
 
-O código das duas versões fica em `src/main/java/com/emberrealm/quest/lessons/l100_01/`. Abra na IDE, mude, rode de novo. O `check` continua valendo porque ele olha o estado no Redis, não o seu código. Na IDE, cada lição é uma classe com `main`; aponte `REDIS_URL` na configuração de execução ou deixe o `.env` na raiz, que o código também lê.
+O código das duas versões fica em `src/main/java/com/emberrealm/quest/lessons/l100_01/`. Abra na IDE, mude, rode de novo. O `verify` continua valendo porque ele olha o estado no Redis, não o seu código. Na IDE, cada lição é uma classe com `main`; aponte `REDIS_URL` na configuração de execução ou deixe o `.env` na raiz, que o código também lê.
 
 !!! note "Progresso"
     O botão no fim de cada lição salva o progresso no seu navegador (localStorage). Nada sai da sua máquina. Marque esta lição como concluída para o aviso de pré-requisito sumir das próximas.

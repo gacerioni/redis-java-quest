@@ -9,23 +9,21 @@ kind: lab
 
 <p class="lesson-meta">Lição 100-02 · Lab · 8 min</p>
 
-## Por que isso importa
+Em Java existem dois clients oficiais para Redis: o Jedis, síncrono e direto, com um pool de conexões por baixo; e o Lettuce, construído sobre netty, com uma conexão compartilhada e três APIs (sync, async, reactive). Os dois falam com a mesma URL e mandam os mesmos comandos — e aparecem lado a lado em todas as lições. Aqui você conecta com os dois, grava a mensagem do dia e fecha tudo direito.
 
-Antes de Kaelith entrar no reino, a aplicação precisa de uma porta para o Redis. Em Java existem dois clients oficiais: o Jedis, síncrono e direto, com um pool de conexões por baixo; e o Lettuce, construído sobre netty, com uma conexão compartilhada e três sabores de API (sync, async, reactive). Os dois falam com a mesma URL, mandam os mesmos comandos e vão aparecer lado a lado em todas as lições. Aqui você conecta com os dois, grava a mensagem do dia e fecha tudo direito.
-
-## O que você vai fazer
+## O que o lab faz
 
 - Criar um `RedisClient` do Jedis a partir de uma URL e rodar `SET` e `GET`
 - Criar o `RedisClient` do Lettuce, abrir uma conexão e usar sync e async na mesma conexão
 - Ler a anatomia da URL `redis://usuario:senha@host:porta`
 - Fechar client e conexão com try-with-resources
 
-## Rode
+## Faça agora
 
 ```bash
 ./quest run 100-02 jedis
-./quest run 100-02 lettuce
-./quest check 100-02
+./quest run 100-02 lettuce    # opcional: mesmo lab, outro client
+./quest verify 100-02
 ```
 
 ## O código
@@ -87,26 +85,26 @@ Os dois clients aceitam essa URL como está: `RedisClient.create(url)` no Jedis 
 !!! tip "try-with-resources"
     `RedisClient` do Jedis e `StatefulRedisConnection` do Lettuce são `AutoCloseable`. O bloco `try (...) { }` garante que o pool ou a conexão sejam fechados mesmo se uma exceção passar no meio. Conexão esquecida aberta é a forma mais comum de bater no limite de 30 clients do plano free.
 
-## O que olhar no Redis Insight
+## No Redis Insight
 
 No **Browser**, filtre por `quest:*`: aparecem `quest:world:motd` com a mensagem do dia e as duas provas de execução, `quest:hello:jedis` e `quest:hello:lettuce`. No **Profiler**, rode o lab e veja o client se apresentar antes do primeiro `SET`: `CLIENT SETINFO` com o nome e a versão da biblioteca e, no Lettuce, o `HELLO 3` negociando RESP3. No topo da tela, o contador de clients conectados sobe enquanto o lab roda e volta quando ele fecha tudo.
 
-## Por dentro
+??? note "Por dentro"
 
-| Comando | O que faz |
-|---|---|
-| `SET chave valor` | Grava uma STRING e responde `OK` |
-| `GET chave` | Lê a STRING; `nil` se a chave não existir (`null` em Java) |
-| `HELLO 3` | Enviado pelo Lettuce ao conectar: negocia a versão do protocolo (RESP3) e pode autenticar no mesmo passo |
-| `AUTH usuario senha` | O que o Jedis envia ao abrir cada conexão quando a URL tem credenciais; o Lettuce faz isso dentro do `HELLO` |
-| `CLIENT SETINFO LIB-NAME ...` | O client se identifica; aparece no `CLIENT LIST` e ajuda a saber quem está conectado em produção |
+    | Comando | O que faz |
+    |---|---|
+    | `SET chave valor` | Grava uma STRING e responde `OK` |
+    | `GET chave` | Lê a STRING; `nil` se a chave não existir (`null` em Java) |
+    | `HELLO 3` | Enviado pelo Lettuce ao conectar: negocia a versão do protocolo (RESP3) e pode autenticar no mesmo passo |
+    | `AUTH usuario senha` | O que o Jedis envia ao abrir cada conexão quando a URL tem credenciais; o Lettuce faz isso dentro do `HELLO` |
+    | `CLIENT SETINFO LIB-NAME ...` | O client se identifica; aparece no `CLIENT LIST` e ajuda a saber quem está conectado em produção |
 
-## Em produção
+??? tip "Em produção"
 
-- Um client por aplicação, nos dois casos. Criar `RedisClient` por requisição abre e fecha conexões (e, no Lettuce, threads) o tempo todo; é o erro clássico que derruba o limite de conexões.
-- Senha fora do código: `.env` em desenvolvimento, secret manager em produção. A URL redigida (`****`) é a que vai para log.
-- Escolha um client por serviço e fique com ele. Jedis quando a base de código é síncrona e simples; Lettuce quando você já vive de `CompletableFuture`, Reactor ou Spring WebFlux. A página [Jedis ou Lettuce?](../referencia/jedis-vs-lettuce.md) compara os dois em detalhe.
+    - Um client por aplicação, nos dois casos. Criar `RedisClient` por requisição abre e fecha conexões (e, no Lettuce, threads) o tempo todo; é o erro clássico que derruba o limite de conexões.
+    - Senha fora do código: `.env` em desenvolvimento, secret manager em produção. A URL redigida (`****`) é a que vai para log.
+    - Escolha um client por serviço e fique com ele. Jedis quando a base de código é síncrona e simples; Lettuce quando você já vive de `CompletableFuture`, Reactor ou Spring WebFlux. A página [Jedis ou Lettuce?](../referencia/jedis-vs-lettuce.md) compara os dois em detalhe.
 
-## Desafio
+??? tip "Desafio"
 
-No `LettuceLab`, troque o `GET` assíncrono pela terceira API: `connection.reactive().get(motd).block()`. O valor que volta é o mesmo, sem abrir nenhuma conexão nova. Depois abra o Profiler e confirme: um único `GET` no fio, seja qual for a API que você escolheu do lado Java.
+    No `LettuceLab`, troque o `GET` assíncrono pela terceira API: `connection.reactive().get(motd).block()`. O valor que volta é o mesmo, sem abrir nenhuma conexão nova. Depois abra o Profiler e confirme: um único `GET` no fio, seja qual for a API que você escolheu do lado Java.

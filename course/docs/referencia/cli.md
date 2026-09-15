@@ -4,7 +4,7 @@ title: Comandos do quest
 
 # Comandos do quest
 
-O `quest` é um wrapper fino sobre `java -jar target/quest.jar`. Ele compila o projeto quando algo mudou e lê o `.env` da raiz.
+O `quest` é um wrapper fino sobre `java -jar target/quest.jar`. Ele compila o projeto quando algo mudou e lê o `.env` da raiz. Para uma introdução guiada com só os comandos essenciais, veja [Como o quest funciona](../trilha/index.md#como-o-quest-funciona) na trilha do workshop.
 
 | Comando | O que faz |
 |---|---|

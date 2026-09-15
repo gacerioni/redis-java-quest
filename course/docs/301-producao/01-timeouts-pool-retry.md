@@ -9,11 +9,9 @@ kind: lab
 
 <p class="lesson-meta">Lição 301-01 · Lab · 12 min</p>
 
-## Por que isso importa
+Quando o link entre a aplicação e o Redis oscila, threads sem timeout ficam presas esperando uma resposta que não vem, o pool esgota e a aplicação congela. Timeout explícito, pool limitado e retry com backoff são os três cintos de segurança de qualquer client Redis. No Redis Cloud entra um quarto: o failover troca o IP por trás do mesmo nome, então o cache de DNS da JVM precisa estar desligado.
 
-O servidor do Ember Realm entrou em produção e, numa noite de raid, o link entre a aplicação e o Redis começa a oscilar. Sem timeout, cada thread do servidor de jogo fica presa esperando uma resposta que não vem, o pool esgota e o jogador vê a tela congelar. Timeout explícito, pool limitado e retry com backoff são os três cintos de segurança de qualquer client Redis. No Redis Cloud entra um quarto: o failover troca o IP por trás do mesmo nome, então o cache de DNS da JVM precisa estar desligado.
-
-## O que você vai fazer
+## O que o lab faz
 
 - Configurar timeout de conexão e de comando (2 s) no Jedis e no Lettuce
 - Limitar o pool do Jedis a 8 conexões, com `PING` nas conexões ociosas
@@ -21,12 +19,12 @@ O servidor do Ember Realm entrou em produção e, numa noite de raid, o link ent
 - Medir uma falha rápida contra `10.255.255.1` com connect timeout de 500 ms
 - Desligar o cache de DNS da JVM e entender por quê
 
-## Rode
+## Faça agora
 
 ```bash
 ./quest run 301-01 jedis
-./quest run 301-01 lettuce
-./quest check 301-01
+./quest run 301-01 lettuce    # opcional: mesmo lab, outro client
+./quest verify 301-01
 ```
 
 ## O código
@@ -102,33 +100,33 @@ O servidor do Ember Realm entrou em produção e, numa noite de raid, o link ent
     Security.setProperty("networkaddress.cache.ttl", "0");
     ```
 
-## O que olhar no Redis Insight
+## No Redis Insight
 
 No Browser, filtre pelo seu prefixo: `quest:boss:spawn` é a STRING com o instante do próximo spawn, gravada pelo `SET` protegido por retry, e `quest:ops:clients` é o HASH que diz qual client rodou e quando. No Profiler, os dois labs mostram o `PING` inicial e o `SET`; do datacenter fantasma não chega nada, porque a falha acontece antes de existir conexão. No Workbench, `CLIENT LIST` durante o lab mostra as conexões do pool do Jedis (no máximo 8) ou a conexão única do Lettuce.
 
-## Por dentro
+??? note "Por dentro"
 
-| Comando | O que faz |
-|---|---|
-| `PING` | Prova que a conexão está viva; é o que o pool do Jedis manda nas conexões ociosas com `testWhileIdle` |
-| `SET quest:boss:spawn <instante>` | A escrita protegida pelo retry: idempotente, pode repetir sem efeito colateral |
-| `HSET quest:ops:clients jedis <instante>` | Registra qual client rodou, para o `check` |
-| `CLIENT LIST` | No Workbench, mostra quantas conexões cada client abriu e há quanto tempo estão paradas |
+    | Comando | O que faz |
+    |---|---|
+    | `PING` | Prova que a conexão está viva; é o que o pool do Jedis manda nas conexões ociosas com `testWhileIdle` |
+    | `SET quest:boss:spawn <instante>` | A escrita protegida pelo retry: idempotente, pode repetir sem efeito colateral |
+    | `HSET quest:ops:clients jedis <instante>` | Registra qual client rodou, para o `verify` |
+    | `CLIENT LIST` | No Workbench, mostra quantas conexões cada client abriu e há quanto tempo estão paradas |
 
-| Ajuste | Jedis | Lettuce |
-|---|---|---|
-| Timeout de conexão | `connectionTimeoutMillis` | `SocketOptions.connectTimeout` |
-| Timeout de comando | `socketTimeoutMillis` (e `blockingSocketTimeoutMillis` para `BLPOP` e afins) | `RedisURI.setTimeout` (sync) e `TimeoutOptions` (async e reactive) |
-| Conexão morta sem tráfego | `testWhileIdle` + `timeBetweenEvictionRuns` | `KeepAliveOptions`; `TcpUserTimeoutOptions` só com netty epoll no Linux |
-| Reconexão | cada comando pega outra conexão do pool | `autoReconnect(true)`: comandos na fila são reenviados (at-least-once) |
-| O que não repetir | não envolva comandos não idempotentes em retry | `replayFilter`: quem casa com o predicado fica fora do reenvio |
+    | Ajuste | Jedis | Lettuce |
+    |---|---|---|
+    | Timeout de conexão | `connectionTimeoutMillis` | `SocketOptions.connectTimeout` |
+    | Timeout de comando | `socketTimeoutMillis` (e `blockingSocketTimeoutMillis` para `BLPOP` e afins) | `RedisURI.setTimeout` (sync) e `TimeoutOptions` (async e reactive) |
+    | Conexão morta sem tráfego | `testWhileIdle` + `timeBetweenEvictionRuns` | `KeepAliveOptions`; `TcpUserTimeoutOptions` só com netty epoll no Linux |
+    | Reconexão | cada comando pega outra conexão do pool | `autoReconnect(true)`: comandos na fila são reenviados (at-least-once) |
+    | O que não repetir | não envolva comandos não idempotentes em retry | `replayFilter`: quem casa com o predicado fica fora do reenvio |
 
-## Em produção
+??? tip "Em produção"
 
-- Dimensione o pool pela concorrência real mais os comandos bloqueantes ([lição 102-04](../102-eventos/04-conexoes-bloqueantes.md)). O plano free aceita 30 conexões, então `maxTotal` 8 por instância da aplicação já é generoso. `maxWait` curto: melhor um erro em 1 s do que uma fila que só cresce.
-- Retry só para erro de conexão e timeout, com backoff exponencial e um teto de tentativas. `INCR` e `LPUSH` não são idempotentes: no Jedis, não repita; no Lettuce, marque no `replayFilter`.
-- `networkaddress.cache.ttl=0` antes da primeira resolução de nome (ou `-Dsun.net.inetaddr.ttl=0` na JVM). Sem isso, um failover do Redis Cloud deixa sua aplicação batendo no IP antigo até o cache expirar.
+    - Dimensione o pool pela concorrência real mais os comandos bloqueantes ([lição 102-04](../102-eventos/04-conexoes-bloqueantes.md)). O plano free aceita 30 conexões, então `maxTotal` 8 por instância da aplicação já é generoso. `maxWait` curto: melhor um erro em 1 s do que uma fila que só cresce.
+    - Retry só para erro de conexão e timeout, com backoff exponencial e um teto de tentativas. `INCR` e `LPUSH` não são idempotentes: no Jedis, não repita; no Lettuce, marque no `replayFilter`.
+    - `networkaddress.cache.ttl=0` antes da primeira resolução de nome (ou `-Dsun.net.inetaddr.ttl=0` na JVM). Sem isso, um failover do Redis Cloud deixa sua aplicação batendo no IP antigo até o cache expirar.
 
-## Desafio
+??? tip "Desafio"
 
-Troque o connect timeout do fantasma para 3000 ms e rode de novo: a primeira falha deve levar cerca de 3 s. Depois aponte `REDIS_URL` para uma porta fechada, como `redis://localhost:6399`, e compare: `connection refused` chega na hora, porque o sistema operacional responde; o timeout só existe quando a rede engole o pacote.
+    Troque o connect timeout do fantasma para 3000 ms e rode de novo: a primeira falha deve levar cerca de 3 s. Depois aponte `REDIS_URL` para uma porta fechada, como `redis://localhost:6399`, e compare: `connection refused` chega na hora, porque o sistema operacional responde; o timeout só existe quando a rede engole o pacote.
