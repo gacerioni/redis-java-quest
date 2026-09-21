@@ -1,11 +1,13 @@
 # Redis Java Quest
 
 A self-paced Redis course for Java developers, with **Jedis** and **Lettuce** side by side.
-You build the server of a fictional MMORPG, **Ember Realm**, against your own Redis (Redis Cloud free tier or Docker),
-one short lesson at a time: cache, sessions, queues, events, search, and production practices.
+Learn backend patterns against your own Redis (Redis Cloud free tier or Docker): sessions, counters, queues, events, search, and production practices. A small fictional game dataset, **Ember Realm**, provides consistent example data.
 
-- Course site (PT-BR): https://platformengineer.io/redisjava/
-- 5 courses, 24 lessons, every lesson runnable with both clients and verified with an automatic check.
+- Start with the guided workshop (PT-BR): https://platformengineer.io/redisjava/trilha/
+- The 60-minute session assumes environment preparation in advance. Without it, the practical goal is PONG + SET/GET + TTL; the remaining topics are demonstrations.
+- Full course: https://platformengineer.io/redisjava/
+- 5 courses, 24 lessons, each with Jedis and Lettuce implementations and checks. Unsupported or unconfigured capabilities stay pending; a skipped capability is not a successful verification.
+- Pinned clients: Jedis 8.0.1 and Lettuce 7.7.0. Both negotiate RESP3 by default, with RESP2 fallback.
 - Code and comments in English, lesson prose and console output in Brazilian Portuguese (the audience).
 
 ![Redis Java Quest landing page](docs/screens/landing-1280.png)
@@ -19,16 +21,17 @@ git clone https://github.com/gacerioni/redis-java-quest.git
 cd redis-java-quest
 cp .env.example .env            # paste your Redis URL (redis://default:PASSWORD@host:port)
 ./quest doctor                  # first run builds the jar
-./quest seed                    # loads the Ember Realm world under your key prefix
-./quest start 100-02            # setup + the steps of the lesson
-./quest run 100-02 jedis        # step 1: run the ready lab (or lettuce)
-./quest verify 100-02           # checks every step in your Redis
-./quest solve 100-02            # stuck? does the next step for you (skip marks it as skipped)
+./quest run 100-02 jedis        # first SET/GET; no seed required
+./quest verify 100-02           # inspect the result in your Redis
+# Change the message in l100_02/JedisLab.java, run again, observe your change.
+./quest seed                    # now load example profiles, items and ranking
 ```
 
-Every lesson is a small workflow with the lab lifecycle of guided platforms: `start` (setup), `verify`, `solve`, `skip`.
-Lessons also have a "Sua vez" step: a `JedisExercise`/`LettuceExercise` stub with a hole the student must implement
-(`./quest exercise <id> jedis`); reference solutions live in `solutions/`.
+The full course also supports `start` (setup), `verify`, `solve`, and explicit `skip`. Most lessons are ready-to-run labs with optional challenges. **String (101-01)** includes the code-completion exercise: implement `castHeal` in `JedisExercise` or `LettuceExercise`, then run `./quest exercise 101-01 jedis`. Reference solutions live in `solutions/l101_01/`.
+
+CLI checks inspect Redis state and execution evidence. They do not certify production readiness or prove concurrency safety. Page buttons record personal study in the browser, separately from CLI progress.
+
+In an IDE, run `com.emberrealm.quest.core.Main` with arguments such as `run 100-02 jedis`, using the repository root as working directory. Individual `Lab` classes do not have their own `main`.
 
 No Redis yet? `docker compose up -d` starts Redis 8 (all modules) on `localhost:6379` and Redis Insight on `http://localhost:5540`.
 The local Redis is configured with `maxclients 30` on purpose to mirror the Redis Cloud free plan (lesson 102-04 depends on it).
@@ -51,7 +54,7 @@ Windows: use `quest.cmd` instead of `./quest`.
 
 | Course | Lessons |
 |---|---|
-| Fundamentos (100) | Topologies (OSS, Cluster, Redis Cloud proxy), connect, Redis Insight, keys/TTL/SCAN, pipeline and MULTI |
+| Fundamentos (100) | Topologies (standalone, OSS Cluster, Cloud/Software proxy and OSS Cluster API), connect, Redis Insight, keys/TTL/SCAN, pipeline and MULTI |
 | Tipos (101) | String, Hash, List, Set, Sorted Set, Bloom |
 | Eventos (102) | Pub/Sub, Streams, consumer groups, blocking connections |
 | Busca (201) | JSON + FT.SEARCH, FT.AGGREGATE, FT.HYBRID, vector sets |
@@ -64,8 +67,7 @@ Windows: use `quest.cmd` instead of `./quest`.
 REDIS_URL=redis://localhost:6379 scripts/smoke_all.sh   # full gauntlet against a Redis
 ```
 
-The gauntlet is the definition of done: every lesson runs with Jedis, runs with Lettuce, and its check passes.
-`scripts/dod.sh` chains the text lint, the unit tests, the gauntlet and a strict site build in one command.
+The gauntlet exercises both clients in an isolated temporary checkout, including the String reference solutions and manual-command step. It reports verified, failed and unavailable capabilities separately: TLS and failover require their own environments; missing capability is not a green check. `scripts/dod.sh` chains text lint, unit tests, the gauntlet and a strict site build. See [release validation and publishing](docs/release.md).
 
 ## Building and publishing the site
 

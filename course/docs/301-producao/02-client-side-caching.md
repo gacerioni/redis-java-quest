@@ -89,7 +89,7 @@ Abra o Profiler antes de rodar. Com cache, as 1000 leituras aparecem como um ún
 ??? tip "Em produção"
 
     - Redis Cloud e Redis Software: client-side caching exige banco na versão 7.4 ou superior e RESP3. O modo de duas conexões (`REDIRECT`) não é suportado nesses produtos, e o Jedis não implementa `BCAST`, `OPTIN` nem `OPTOUT`: use o modo padrão, como no lab.
-    - O Lettuce marca a API `ClientSideCaching` como legada a partir da versão 7.8; a mecânica (tracking + invalidação) continua a mesma, então o que você aprendeu aqui vale para a API que vier depois.
+    - O exemplo usa `ClientSideCaching` na versão Lettuce 7.7.0 fixada no projeto. Ao atualizar o client, confira o status e os requisitos dessa API na documentação da versão adotada; tracking e invalidação continuam sendo os conceitos a entender.
     - Cache é para o que muda pouco e lê muito. Contadores e rankings geram uma enxurrada de invalidações: sirva esses por uma conexão sem cache. Dimensione `maxSize` pelo tamanho médio dos valores (`MEMORY USAGE`) e lembre que qualquer desconexão do client zera o cache.
 
 ??? tip "Desafio"

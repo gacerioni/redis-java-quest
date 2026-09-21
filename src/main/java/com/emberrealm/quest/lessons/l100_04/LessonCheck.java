@@ -35,7 +35,7 @@ public final class LessonCheck implements Check {
             v.expect(!marker.isEmpty(), "a lição rodou e gravou o marcador", "rode: ./quest run 100-04 jedis (ou lettuce)");
             if (!marker.isEmpty()) {
                 v.pass("SCAN percorreu " + marker.get("keys") + " chaves em " + marker.get("scan_pages") + " página(s), sem KEYS");
-                if ("jedis".equals(marker.get("client"))) v.skip("falta experimentar com o Lettuce: ./quest run 100-04 lettuce");
+                if ("jedis".equals(marker.get("client"))) v.info("Opcional: experimente com o Lettuce: ./quest run 100-04 lettuce");
             }
         }
     }

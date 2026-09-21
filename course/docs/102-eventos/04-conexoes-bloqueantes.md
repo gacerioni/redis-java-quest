@@ -9,7 +9,7 @@ kind: lab
 
 <p class="lesson-meta">Lição 102-04 · Lab · 12 min</p>
 
-`BRPOP`, `XREADGROUP BLOCK` e `SUBSCRIBE` parecem gratuitos — o cliente espera e o Redis não gasta CPU. O custo está na conexão: enquanto espera, ela não serve para mais nada. No Jedis é uma conexão do pool a menos; no Lettuce, um `BRPOP` na conexão compartilhada segura todos os comandos atrás dele. No plano free do Redis Cloud o limite é 30 conexões: o 31º cliente recebe `ERR max number of clients reached`. Esta lição mostra tudo isso acontecendo e como dimensionar.
+`BRPOP`, `XREADGROUP BLOCK` e `SUBSCRIBE` parecem gratuitos; o cliente espera e o Redis não gasta CPU. O custo está na conexão: enquanto espera, ela não serve para mais nada. No Jedis é uma conexão do pool a menos; no Lettuce, um `BRPOP` na conexão compartilhada segura todos os comandos atrás dele. No plano free do Redis Cloud o limite é 30 conexões: o 31º cliente recebe `ERR max number of clients reached`. Esta lição mostra tudo isso acontecendo e como dimensionar.
 
 ## O que o lab faz
 
@@ -60,6 +60,7 @@ kind: lab
     // Cada jogador com seu connect(): a conexão compartilhada é multiplexada e não pode bloquear
     executor.submit(() -> {
         try (StatefulRedisConnection<String, String> own = Clients.lettuce().connect()) {
+            own.setTimeout(Duration.ofSeconds(5)); // longer than the 3-second server wait
             own.sync().clientSetname(prefix + "-waiter");
             return own.sync().brpop(3, queue);                      // KeyValue<String, String>
         }
@@ -142,8 +143,8 @@ Com o Insight aberto no mesmo banco enquanto a lição roda: no Workbench, `CLIE
 
 ??? tip "Em produção"
 
-    - Timeouts: no Jedis, comandos bloqueantes não usam o `socketTimeout` (2 s por padrão) e sim `blockingSocketTimeoutMillis` (0 = infinito); no Lettuce, a API sync respeita o timeout da `RedisURI` (5 s no curso), então um `BLOCK` maior que ele vira `RedisCommandTimeoutException`. Use `BLOCK` de 1 a 5 s em loop, nunca 0: reconexão e shutdown ficam impossíveis de controlar.
-    - Poucos workers bloqueados valem mais que muitos: um worker com `XREADGROUP COUNT 50 BLOCK 2000` drena a fila tão rápido quanto dez com `COUNT 5`, gastando uma conexão.
+    - Use **conexão dedicada e timeout de client maior que o prazo de espera no servidor**, com margem para a rede. No Jedis, configure o timeout de socket para comandos bloqueantes separadamente; não o trate como o timeout normal de comandos. No Lettuce, a conexão dedicada pode usar `setTimeout(Duration.ofSeconds(5))` para um `BRPOP 3`. Uma conexão separada com timeout curto demais ainda falha antes do bloqueio terminar. Prefira esperas finitas em loop para facilitar reconexão e encerramento.
+    - Ajuste o lote e o número de workers pelo tempo de processamento. `XREADGROUP COUNT 50 BLOCK 2000` pode reduzir viagens e conexões comparado a lotes menores; não garante a mesma vazão de vários workers quando o processamento é o gargalo.
     - Monitore `blocked_clients` e `connected_clients` contra `maxclients` (Redis Insight, `INFO clients`, métricas do Redis Cloud). `rejected_connections` em `INFO stats` acusa que o limite já foi batido.
 
 ??? tip "Desafio"

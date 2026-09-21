@@ -35,10 +35,10 @@ public final class LettuceLab implements Lab {
             try {
                 String text = redis.clusterInfo();
                 ctx.out.info(text.lines().findFirst().orElse(text));
-                ctx.out.hint("Redis OSS em modo cluster: aí sim o client precisaria de RedisClusterClient.");
+                ctx.out.hint("Cluster API disponível: Redis OSS em cluster ou Redis Cloud/Software com OSS Cluster API. Use io.lettuce.core.cluster.RedisClusterClient.");
             } catch (Exception e) {
                 ctx.out.kv("resposta", e.getMessage());
-                ctx.out.hint("Sem cluster do lado do client: no Redis Cloud o proxy roteia para os shards.");
+                ctx.out.hint(Topology.failureHint(e));
             }
 
             ctx.out.step("Tamanho do banco");

@@ -42,7 +42,7 @@ public final class LessonCheck implements Check {
             if (!marker.isEmpty()) {
                 v.pass("o tour encontrou " + marker.get("keys") + " chaves: " + marker.get("items") + " itens JSON, "
                         + marker.get("players") + " fichas de personagem, " + marker.get("types") + " tipos diferentes");
-                if ("jedis".equals(marker.get("client"))) v.skip("falta experimentar com o Lettuce: ./quest run 100-03 lettuce");
+                if ("jedis".equals(marker.get("client"))) v.info("Opcional: experimente com o Lettuce: ./quest run 100-03 lettuce");
             }
         }
     }

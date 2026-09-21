@@ -32,11 +32,11 @@ public final class JedisLab implements Lab {
 
     static final String DEFAULT_EAST = "redis://localhost:6391";
     static final String DEFAULT_WEST = "redis://localhost:6392";
-    static final int BEATS = 12;
     static final long BEAT_MS = 500;
 
     @Override
     public void run(Ctx ctx) throws Exception {
+        ctx.begin();
         // Jedis logs a WARN with a full stack trace every second while an endpoint is down; the lab reports switches itself
         System.setProperty("org.slf4j.simpleLogger.log.redis.clients.jedis.mcf.HealthCheckImpl", "error");
         String eastUrl = Env.get("QUEST_EAST_URL", DEFAULT_EAST);
@@ -57,12 +57,12 @@ public final class JedisLab implements Lab {
         if (!eastUp && !westUp) {
             ctx.out.warn("Nenhum datacenter responde. Suba os dois: docker compose --profile failover up -d");
             ctx.out.hint("Ou aponte QUEST_EAST_URL e QUEST_WEST_URL para dois bancos seus (duas réplicas Active-Active, por exemplo).");
-            ctx.done("failover", "skipped");
+            ctx.unavailable("heartbeat", "skipped", "failover", "not_observed", "failback", "not_observed");
             return;
         }
         if (!eastUp || !westUp) ctx.out.warn("Um dos datacenters está fora; o MultiDbClient começa pelo que está de pé.");
 
-        ctx.out.step("MultiDbConfig: pesos, health check por PING, circuit breaker, retry e failback");
+        ctx.out.step("MultiDbClient experimental: pesos, health check por PING, circuit breaker, retry e failback");
         HealthCheckStrategy.Config health = new HealthCheckStrategy.Config(1000, 500, 1, 100, ProbingPolicy.BuiltIn.ALL_SUCCESS);
         MultiDbConfig.StrategySupplier pingEverySecond = (hostAndPort, clientConfig) -> new PingStrategy(hostAndPort, clientConfig, health);
         MultiDbConfig multiConfig = MultiDbConfig.builder()
@@ -87,7 +87,7 @@ public final class JedisLab implements Lab {
         ctx.out.kv("health check", "PING a cada 1 s, timeout 500 ms");
         ctx.out.kv("circuit breaker", "janela 2 s, abre com 2 falhas de conexão (50%)");
         ctx.out.kv("failback", "confere o east a cada 1 s, com carência de 2 s");
-        ctx.out.info("Em produção os padrões são mais calmos (janela maior, carência de 60 s). Aqui tudo é curto para caber em 6 s.");
+        ctx.out.info("Em produção os padrões são mais calmos (janela maior, carência de 60 s). O lab usa intervalos curtos para observar as trocas.");
 
         heartbeat(ctx, multiConfig, east, west, heartbeat);
     }
@@ -95,6 +95,8 @@ public final class JedisLab implements Lab {
     /** MultiDbClient decorates every command with resilience4j (circuit breaker + retry), hence resilience4j-all in the pom. */
     static void heartbeat(Ctx ctx, MultiDbConfig multiConfig, HostAndPort east, HostAndPort west, String heartbeat) throws Exception {
         AtomicInteger switches = new AtomicInteger();
+        FailoverEvidence evidence = new FailoverEvidence(east.getHost() + ":" + east.getPort(), west.getHost() + ":" + west.getPort());
+        int beats = beats();
         try (MultiDbClient client = MultiDbClient.builder()
                 .multiDbConfig(multiConfig)
                 .databaseSwitchListener(event -> {
@@ -104,22 +106,24 @@ public final class JedisLab implements Lab {
                 .build()) {
             ctx.out.kv("ativo no início", label(client.getActiveDatabaseEndpoint()));
 
-            ctx.out.step("Heartbeat: SET " + heartbeat + " a cada 500 ms por 6 s. Derrube o east em outro terminal e veja a troca");
-            ctx.out.cmd("SET " + heartbeat + " <instante>  (x" + BEATS + ")");
+            ctx.out.step("Heartbeat: SET " + heartbeat + " a cada 500 ms por " + seconds() + " s. Derrube e restaure o east em outro terminal e veja a troca");
+            ctx.out.cmd("SET " + heartbeat + " <instante>  (x" + beats + ")");
             int ok = 0;
             int failed = 0;
             String active = "?";
-            for (int i = 1; i <= BEATS; i++) {
+            for (int i = 1; i <= beats; i++) {
                 try {
+                    String before = label(client.getActiveDatabaseEndpoint());
                     client.set(heartbeat, Instant.now().toString());
                     active = label(client.getActiveDatabaseEndpoint());
+                    if (before.equals(active)) evidence.observe(active);
                     ok++;
                     ctx.out.info(String.format("batida %2d -> %s", i, active));
                 } catch (JedisException e) {
                     failed++;
                     ctx.out.warn(String.format("batida %2d falhou: %s", i, firstLine(e.getMessage())));
                 }
-                if (i < BEATS) Thread.sleep(BEAT_MS);
+                if (i < beats) Thread.sleep(BEAT_MS);
             }
             ctx.out.kv("east saudável", client.isHealthy(east));
             ctx.out.kv("west saudável", client.isHealthy(west));
@@ -128,11 +132,30 @@ public final class JedisLab implements Lab {
             try (redis.clients.jedis.RedisClient home = Clients.jedis()) {
                 home.hset(ctx.k("aa", "clients"), ctx.client, Instant.now().toString());
             }
-            ctx.done("failover", "ok",
-                    "beats_ok", String.valueOf(ok),
-                    "beats_failed", String.valueOf(failed),
-                    "switches", String.valueOf(switches.get()),
-                    "active", active);
+            recordOutcome(ctx, ok, failed, switches.get(), active, evidence);
+        }
+    }
+
+    static int seconds() {
+        int seconds = Integer.parseInt(Env.get("QUEST_FAILOVER_SECONDS", "20"));
+        if (seconds < 5 || seconds > 300) throw new IllegalArgumentException("QUEST_FAILOVER_SECONDS deve estar entre 5 e 300");
+        return seconds;
+    }
+
+    static int beats() { return (int) (seconds() * 1000L / BEAT_MS); }
+
+    static void recordOutcome(Ctx ctx, int ok, int failed, int switches, String active, FailoverEvidence evidence) {
+        String[] fields = {"heartbeat", ok > 0 ? "ok" : "failed",
+                "failover", evidence.failoverObserved() ? "observed" : "not_observed",
+                "failback", evidence.failbackObserved() ? "observed" : "not_observed",
+                "beats_ok", String.valueOf(ok), "beats_failed", String.valueOf(failed),
+                "switches", String.valueOf(switches), "active", active};
+        ctx.out.kv("failover comprovado por escrita", evidence.failoverObserved());
+        ctx.out.kv("failback comprovado por escrita", evidence.failbackObserved());
+        if (ok > 0 && evidence.complete()) ctx.done(fields);
+        else {
+            ctx.out.hint("Para comprovar failover e failback, comece com east ativo, pare-o após a primeira batida e restaure-o enquanto o lab roda. Aumente QUEST_FAILOVER_SECONDS se precisar.");
+            ctx.unavailable(fields);
         }
     }
 

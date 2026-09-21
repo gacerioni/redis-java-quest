@@ -5,14 +5,14 @@ course: "100"
 
 # Knowledge check: Fundamentos
 
-Cinco perguntas rápidas. Acerte quatro para fechar o curso.
+Cinco perguntas rápidas. Acerte quatro para concluir este knowledge check; os labs têm verificações separadas.
 
 <div class="quest-quiz" data-course="100"></div>
 
 <script type="application/json" id="quest-quiz-data">
 [
   {
-    "q": "Por que não se usa JedisCluster ou RedisClusterClient contra um banco padrão do Redis Cloud?",
+    "q": "Por que usamos RedisClient, e não RedisClusterClient, no modo padrão de acesso ao Redis Cloud?",
     "options": [
       "Porque o Redis Cloud não suporta mais de um shard por banco",
       "Porque um proxy fica na frente dos shards e o client vê um endpoint único; o client de cluster só faz sentido com a OSS Cluster API habilitada",
@@ -27,7 +27,7 @@ Cinco perguntas rápidas. Acerte quatro para fechar o curso.
     "options": [
       "Um por thread, para evitar concorrência",
       "Um por requisição, fechando logo depois",
-      "Um por aplicação, abrindo poucas conexões a partir dele",
+      "Um por aplicação, reutilizando as conexões adequadas ao trabalho",
       "Um por chave acessada"
     ],
     "answer": 2,
@@ -53,7 +53,7 @@ Cinco perguntas rápidas. Acerte quatro para fechar o curso.
       "KEYS exige RESP3 e a maioria dos clients usa RESP2"
     ],
     "answer": 1,
-    "why": "O Redis executa um comando por vez; KEYS em milhões de chaves trava tudo por segundos, enquanto cada chamada de SCAN devolve uma página pequena e o cursor para a próxima."
+    "why": "KEYS faz a varredura numa execução; SCAN divide o trabalho em chamadas com cursor. COUNT é uma sugestão, não uma garantia de tamanho ou latência."
   },
   {
     "q": "Qual é a diferença entre um pipeline e um MULTI/EXEC?",

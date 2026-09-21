@@ -10,12 +10,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class StepEngineTest {
 
     @Test
-    void lessonWithExerciseGetsLabAndCodeStepsByDefault() {
+    void stringLessonIncludesTheHandsOnRedisStep() {
         Lessons.Lesson lesson = Lessons.byId("101-01").orElseThrow();
         List<Step> steps = StepEngine.stepsFor(lesson);
-        assertEquals(List.of("lab", "codigo"), steps.stream().map(s -> s.id).toList());
+        assertEquals(List.of("lab", "mexa", "codigo"), steps.stream().map(s -> s.id).toList());
         assertTrue(steps.get(0).command.contains("./quest run 101-01"));
-        assertTrue(steps.get(1).command.contains("./quest exercise 101-01"));
+        assertTrue(steps.get(2).command.contains("./quest exercise 101-01"));
     }
 
     @Test

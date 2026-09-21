@@ -40,8 +40,8 @@ public final class LessonCheck implements Check {
                         + ", itens de nível 40 ou mais: " + marker.getOrDefault("veterans", "?"));
                 boolean jedisRan = marker.containsKey("ran_jedis");
                 boolean lettuceRan = marker.containsKey("ran_lettuce");
-                if (jedisRan && !lettuceRan) v.skip("falta experimentar com o Lettuce: ./quest run 201-02 lettuce");
-                if (lettuceRan && !jedisRan) v.skip("falta experimentar com o Jedis: ./quest run 201-02 jedis");
+                if (jedisRan && !lettuceRan) v.info("Opcional: experimente com o Lettuce: ./quest run 201-02 lettuce");
+                if (lettuceRan && !jedisRan) v.info("Opcional: experimente com o Jedis: ./quest run 201-02 jedis");
                 if (jedisRan && lettuceRan) v.pass("os dois clients rodaram as mesmas agregações");
             }
         }

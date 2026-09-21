@@ -31,8 +31,8 @@ public final class LessonCheck implements Check {
             Map<String, String> clients = jedis.hgetAll(ctx.k("ops", "clients"));
             boolean jedisRan = clients.containsKey("jedis");
             boolean lettuceRan = clients.containsKey("lettuce");
-            if (jedisRan && !lettuceRan) v.skip("falta experimentar com o Lettuce: ./quest run 301-01 lettuce");
-            if (lettuceRan && !jedisRan) v.skip("falta experimentar com o Jedis: ./quest run 301-01 jedis");
+            if (jedisRan && !lettuceRan) v.info("Opcional: experimente com o Lettuce: ./quest run 301-01 lettuce");
+            if (lettuceRan && !jedisRan) v.info("Opcional: experimente com o Jedis: ./quest run 301-01 jedis");
             if (jedisRan && lettuceRan) v.pass("os dois clients passaram pelo mesmo caminho: timeout, retry e falha rápida");
         }
     }

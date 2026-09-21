@@ -32,8 +32,8 @@ public final class LessonCheck implements Check {
 
             boolean jedisRan = "ok".equals(marker.get("jedis"));
             boolean lettuceRan = "ok".equals(marker.get("lettuce"));
-            if (jedisRan && !lettuceRan) v.skip("falta experimentar com o Lettuce: ./quest run 102-02 lettuce");
-            if (lettuceRan && !jedisRan) v.skip("falta experimentar com o Jedis: ./quest run 102-02 jedis");
+            if (jedisRan && !lettuceRan) v.info("Opcional: experimente com o Lettuce: ./quest run 102-02 lettuce");
+            if (lettuceRan && !jedisRan) v.info("Opcional: experimente com o Jedis: ./quest run 102-02 jedis");
             if (jedisRan && lettuceRan) v.pass("os dois clients escreveram e leram o diário");
         }
     }

@@ -53,9 +53,9 @@ public final class JedisLab implements Lab {
 
             ctx.out.step("TTL tem dois valores especiais");
             ctx.out.cmd("TTL " + ctx.k("player", "kaelith"));
-            ctx.out.kv("TTL da ficha", jedis.ttl(ctx.k("player", "kaelith")) + " (-1: a chave existe e nunca expira)");
+            ctx.out.kv("TTL da ficha", describeTtl(jedis.ttl(ctx.k("player", "kaelith"))));
             ctx.out.cmd("TTL " + ctx.k("session", "inexistente"));
-            ctx.out.kv("TTL de chave inexistente", jedis.ttl(ctx.k("session", "inexistente")) + " (-2: não existe)");
+            ctx.out.kv("TTL da chave de exemplo", describeTtl(jedis.ttl(ctx.k("session", "inexistente"))));
 
             ctx.out.step("Kaelith continua jogando: EXPIRE renova o prazo (sliding expiration)");
             ctx.out.cmd("EXPIRE " + session + " 3600");
@@ -136,5 +136,11 @@ public final class JedisLab implements Lab {
             case "zset" -> "sorted set";
             default -> type;
         };
+    }
+
+    static String describeTtl(long ttl) {
+        if (ttl == -2) return "-2 (a chave não existe)";
+        if (ttl == -1) return "-1 (a chave existe e não tem prazo de expiração)";
+        return ttl + " s até expirar";
     }
 }

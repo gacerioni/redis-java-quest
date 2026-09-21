@@ -102,13 +102,10 @@ public final class LettuceLab implements Lab {
                 ctx.out.info("connect() falha com RedisConnectionException; o autoReconnect só entra depois de uma conexão que existiu.");
             }
 
-            ctx.out.step("Cache de DNS da JVM: desligue quando o endpoint pode trocar de IP");
-            String before = Security.getProperty("networkaddress.cache.ttl");
-            ctx.out.kv("networkaddress.cache.ttl antes", before == null ? "padrão da JVM (30 s para respostas positivas)" : before);
-            Security.setProperty("networkaddress.cache.ttl", "0");
-            Security.setProperty("networkaddress.cache.negative.ttl", "0");
-            ctx.out.kv("networkaddress.cache.ttl agora", Security.getProperty("networkaddress.cache.ttl"));
-            ctx.out.info("Failover no Redis Cloud e Active-Active trocam o IP por trás do mesmo nome. Com cache, o client insiste no IP morto.");
+            ctx.out.step("Cache de DNS configurado antes do primeiro client, na entrada da aplicação");
+            ctx.out.kv("networkaddress.cache.ttl", Security.getProperty("networkaddress.cache.ttl"));
+            ctx.out.kv("networkaddress.cache.negative.ttl", Security.getProperty("networkaddress.cache.negative.ttl"));
+            ctx.out.info("O curso usa TTL 0 para reler o DNS na reconexão. Em produção, avalie a carga no resolvedor e o tempo de recuperação.");
 
             redis.hset(clientsKey, ctx.client, Instant.now().toString());
             ctx.done("fast_fail_ms", String.valueOf(ghost.firstFailureMs()),

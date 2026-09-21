@@ -19,15 +19,15 @@ JAR="target/quest.jar"
 needs_build() {
   [ ! -f "$JAR" ] && return 0
   [ "${QUEST_REBUILD:-0}" = "1" ] && return 0
-  [ -n "$(find src pom.xml -newer "$JAR" \( -name '*.java' -o -name '*.json' -o -name '*.csv' -o -name '*.properties' -o -name 'pom.xml' \) 2>/dev/null | head -1)" ] && return 0
+  [ -n "$(find src pom.xml -newer "$JAR" \( -name '*.java' -o -name '*.json' -o -name '*.csv' -o -name '*.properties' -o -name 'pom.xml' \) -print -quit)" ] && return 0
   return 1
 }
 if needs_build; then
   echo "[quest] building target/quest.jar (first run takes a minute)..."
   if [ -x ./mvnw ]; then ./mvnw -q -B -DskipTests package; else mvn -q -B -DskipTests package; fi
 fi
-java -jar "$JAR" "$@"
-code=$?
+code=0
+java -jar "$JAR" "$@" || code=$?
 if [ "$code" -eq 5 ] && { [ "${1:-}" = "solve" ] || [ "${1:-}" = "skip" ]; }; then
   echo "[quest] solução copiada: recompilando e rodando o exercício..."
   if [ -x ./mvnw ]; then ./mvnw -q -B -DskipTests package; else mvn -q -B -DskipTests package; fi

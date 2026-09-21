@@ -9,7 +9,7 @@ kind: lab
 
 <p class="lesson-meta">Lição 102-02 · Lab · 10 min</p>
 
-Um log de eventos que não pode se perder: cada registro em ordem, com um id que ninguém repete, relido por vários consumidores cada um no seu ritmo. O Stream do Redis é um append-only log — `XADD` grava, o servidor cunha o id `<ms>-<seq>`, e os leitores percorrem o histórico por faixa (`XRANGE`) ou como cursor (`XREAD`). `MAXLEN` mantém o tamanho sob controle.
+Um log de eventos que não pode se perder: cada registro em ordem, com um id que ninguém repete, relido por vários consumidores cada um no seu ritmo. O Stream do Redis é um append-only log; `XADD` grava, o servidor cunha o id `<ms>-<seq>`, e os leitores percorrem o histórico por faixa (`XRANGE`) ou como cursor (`XREAD`). `MAXLEN` mantém o tamanho sob controle.
 
 ## O que o lab faz
 

@@ -9,7 +9,7 @@ kind: lab
 
 <p class="lesson-meta">Lição 101-05 · Lab · 8 min</p>
 
-Um placar em que cada membro carrega um score e o Redis mantém a ordem a cada escrita: ler o top 10, a posição de alguém ou uma faixa de score custa O(log N) — sem `ORDER BY` a cada consulta. É o Sorted Set, e o lab constrói o ranking de XP do seed com ele.
+Um placar em que cada membro carrega um score e o Redis mantém a ordem a cada escrita: buscar a posição custa O(log N); retornar o top 10 ou uma faixa custa O(log N + M), em que M é o número de resultados. A ordem já está no índice, sem `ORDER BY` a cada consulta. É o Sorted Set, e o lab constrói o ranking de XP do seed com ele.
 
 ## O que o lab faz
 
@@ -97,11 +97,11 @@ No **Profiler**, veja o `ZINCRBY` passar como um comando só: não há `GET`, so
     | `ZCOUNT key min max` | Quantos membros têm score na faixa |
     | `ZRANGEBYSCORE key min max [WITHSCORES] [LIMIT off n]` | Membros por faixa de score. `(100` exclui a borda; `-inf` e `+inf` abrem a faixa |
 
-    Empates: membros com o mesmo score ficam em ordem lexicográfica. Se o placar precisa desempatar por "quem chegou primeiro", coloque essa informação no próprio score (veja abaixo).
+    Empates: membros com o mesmo score ficam em ordem lexicográfica por bytes, invertida em consultas com `REV`. O Redis não guarda automaticamente a ordem de chegada para desempatar.
 
 ??? tip "Em produção"
 
-    - O score é um double de 64 bits: inteiros até 2^53 são exatos. Para desempatar por tempo, use a parte fracionária, por exemplo `xp + (1 - timestamp / 1e13)`: mesmo XP, quem chegou antes fica acima.
+    - O score é um double de 64 bits: inteiros até 2^53 são exatos. Um score composto com horário exige planejar escala e precisão; não acrescente um timestamp fracionário sem validar perda de precisão, limites e ordem desejada.
     - Placar por temporada: uma chave por semana (`rank:xp:2026-w37`) com `EXPIRE`, em vez de zerar o ranking global. `ZUNIONSTORE` junta temporadas quando você precisar do acumulado.
     - Se só o topo interessa, não deixe o ranking crescer sem limite: `ZREMRANGEBYRANK key 0 -1001` mantém os 1000 melhores. Leituras são O(log N + M), mas `ZRANGE 0 -1` em milhões de membros é um comando lento como qualquer `*RANGE` sem limite.
 

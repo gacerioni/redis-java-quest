@@ -9,7 +9,7 @@ kind: lab
 
 <p class="lesson-meta">Lição 100-02 · Lab · 8 min</p>
 
-Em Java existem dois clients oficiais para Redis: o Jedis, síncrono e direto, com um pool de conexões por baixo; e o Lettuce, construído sobre netty, com uma conexão compartilhada e três APIs (sync, async, reactive). Os dois falam com a mesma URL e mandam os mesmos comandos — e aparecem lado a lado em todas as lições. Aqui você conecta com os dois, grava a mensagem do dia e fecha tudo direito.
+Em Java existem dois clients oficiais para Redis: o Jedis, síncrono e direto, com um pool de conexões por baixo; e o Lettuce, construído sobre netty, com uma conexão compartilhada e três APIs (sync, async, reactive). Os dois falam com a mesma URL e mandam os mesmos comandos; e aparecem lado a lado em todas as lições. Aqui você conecta com os dois, grava a mensagem do dia e fecha tudo direito.
 
 ## O que o lab faz
 
@@ -31,15 +31,15 @@ Em Java existem dois clients oficiais para Redis: o Jedis, síncrono e direto, c
 === "Jedis"
 
     ```java
-    // RedisClient (Jedis 7.2+) is the entry point: it replaces JedisPooled and UnifiedJedis
-    // and pools connections for you. Clients.jedis() is RedisClient.create(Env.redisUrl()).
+    // Jedis 8: RedisClient is the pooled entry point.
+    // Clients.jedis() builds this client from Env.redisUrl().
     try (RedisClient jedis = Clients.jedis()) {
         String motd = ctx.k("world", "motd");                        // quest:world:motd
         String reply = jedis.set(motd, "Bem-vindo ao Ember Realm, aventureiro.");   // "OK"
         jedis.get(motd);                                              // the message back
 
         jedis.set(ctx.k("hello", "jedis"), "ok");                    // proof this client ran
-    }   // close() returns every pooled connection
+    }   // closes this lab client and its pool
     ```
 
 === "Lettuce"
@@ -78,7 +78,7 @@ Os dois clients aceitam essa URL como está: `RedisClient.create(url)` no Jedis 
 
 ### Jedis e Lettuce, cada um do seu jeito
 
-**Jedis.** `RedisClient` é o ponto de entrada desde o Jedis 7.2 e substitui `JedisPooled` e `UnifiedJedis` (ainda existem, mas o caminho novo é este). Ele carrega um pool: cada chamada pega uma conexão emprestada, manda o comando, espera a resposta e devolve a conexão. É thread-safe, síncrono e simples de ler. Por padrão fala RESP2; RESP3 é opcional (`DefaultJedisClientConfig.builder().resp3()`), e a lição [301-02](../301-producao/02-client-side-caching.md) precisa dele. Timeouts e tamanho do pool ficam em `RedisClient.builder()`, na lição [301-01](../301-producao/01-timeouts-pool-retry.md).
+**Jedis 8.** `RedisClient` gerencia o pool: cada chamada pega uma conexão, manda o comando, espera a resposta e devolve a conexão. É thread-safe e síncrono. `JedisPooled` foi removido; para cluster, use `RedisClusterClient` (`JedisCluster` está depreciado). A negociação padrão usa RESP3, com fallback para RESP2 quando o servidor não oferece suporte. A lição [301-02](../301-producao/02-client-side-caching.md) exige RESP3 explicitamente para client-side caching. Veja o [guia de migração](https://redis.github.io/jedis/migration-guides/v7-to-v8/). Timeouts e tamanho do pool ficam em `RedisClient.builder()`, na lição [301-01](../301-producao/01-timeouts-pool-retry.md).
 
 **Lettuce.** `RedisClient` é caro (é dono das threads do netty): crie um por aplicação e faça `shutdown()` no fim. Conexões (`connect()`) são baratas e uma só atende muitas threads ao mesmo tempo: os comandos são escritos no socket na ordem em que chegam e as respostas voltam na mesma ordem. `sync()`, `async()` e `reactive()` são três visões da mesma conexão, não três conexões. Por padrão o Lettuce negocia RESP3 com `HELLO 3` e cai para RESP2 se o servidor não souber. A exceção da conexão compartilhada são os comandos bloqueantes e as transações, que precisam de conexão própria: lição [102-04](../102-eventos/04-conexoes-bloqueantes.md).
 
@@ -87,7 +87,7 @@ Os dois clients aceitam essa URL como está: `RedisClient.create(url)` no Jedis 
 
 ## No Redis Insight
 
-No **Browser**, filtre por `quest:*`: aparecem `quest:world:motd` com a mensagem do dia e as duas provas de execução, `quest:hello:jedis` e `quest:hello:lettuce`. No **Profiler**, rode o lab e veja o client se apresentar antes do primeiro `SET`: `CLIENT SETINFO` com o nome e a versão da biblioteca e, no Lettuce, o `HELLO 3` negociando RESP3. No topo da tela, o contador de clients conectados sobe enquanto o lab roda e volta quando ele fecha tudo.
+No **Browser**, filtre por `quest:*`: aparecem `quest:world:motd` com a mensagem do dia e as duas provas de execução, `quest:hello:jedis` e `quest:hello:lettuce`. No **Profiler**, rode o lab e veja o client se apresentar antes do primeiro `SET`: `CLIENT SETINFO` com o nome e a versão da biblioteca e o `HELLO 3` negociando RESP3. No topo da tela, o contador de clients conectados sobe enquanto o lab roda e volta quando ele fecha tudo.
 
 ??? note "Por dentro"
 
@@ -96,7 +96,7 @@ No **Browser**, filtre por `quest:*`: aparecem `quest:world:motd` com a mensagem
     | `SET chave valor` | Grava uma STRING e responde `OK` |
     | `GET chave` | Lê a STRING; `nil` se a chave não existir (`null` em Java) |
     | `HELLO 3` | Enviado pelo Lettuce ao conectar: negocia a versão do protocolo (RESP3) e pode autenticar no mesmo passo |
-    | `AUTH usuario senha` | O que o Jedis envia ao abrir cada conexão quando a URL tem credenciais; o Lettuce faz isso dentro do `HELLO` |
+    | `AUTH usuario senha` | Autenticação com as credenciais da URL; no handshake RESP3 ela pode integrar o `HELLO` |
     | `CLIENT SETINFO LIB-NAME ...` | O client se identifica; aparece no `CLIENT LIST` e ajuda a saber quem está conectado em produção |
 
 ??? tip "Em produção"

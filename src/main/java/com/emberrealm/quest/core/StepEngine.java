@@ -12,11 +12,12 @@ import java.util.Optional;
 
 /**
  * Runs the lifecycle of a lesson's steps: start (setup), verify, solve, skip.
- * Step progress lives in the hash {p}:steps:<lesson> (field = step id, value = done | skipped).
+ * Step progress lives in the hash {p}:steps:<lesson> (done, skipped, pending, unavailable).
  */
 public final class StepEngine {
 
     public static final int EXIT_REBUILD = ExerciseStep.REBUILD_AND_RUN;
+    public static final int EXIT_UNAVAILABLE = 3;
 
     private StepEngine() {
     }
@@ -79,12 +80,14 @@ public final class StepEngine {
             Step s = steps.get(i);
             String state = progress.get(s.id);
             String mark = "done".equals(state) ? "[x]" : "skipped".equals(state) ? "[>]" : "[ ]";
-            if (next == null && state == null) next = s;
+            if (next == null && !settled(state)) next = s;
             ctx.out.info(mark + " " + (i + 1) + ". " + s.title + (s.command != null ? "    " + s.commandFor(ctx) : ""));
         }
         ctx.out.blank();
         if (next == null) {
-            ctx.out.ok("Todos os passos da lição " + lesson.id() + " estão concluídos. Próxima: ./quest next");
+            long skipped = steps.stream().filter(s -> "skipped".equals(progress.get(s.id))).count();
+            if (skipped > 0) ctx.out.warn("Percurso encerrado com " + skipped + " passo(s) pulado(s), sem comprovar sua execução. Próxima: ./quest next");
+            else ctx.out.ok("Todos os passos da lição " + lesson.id() + " estão verificados. Próxima: ./quest next");
             return 0;
         }
         int number = steps.indexOf(next) + 1;
@@ -105,34 +108,45 @@ public final class StepEngine {
         }
         Map<String, String> progress = progress(ctx.keys, lesson.id());
         int ok = 0;
+        int skippedCount = 0;
+        boolean failed = false;
         Step firstFailing = null;
         for (int i = 0; i < steps.size(); i++) {
             Step s = steps.get(i);
             Verdict v = new Verdict();
-            s.verify(ctx, v);
             boolean skipped = "skipped".equals(progress.get(s.id));
             ctx.out.step("Passo " + (i + 1) + ": " + s.title + (skipped ? " (pulado)" : ""));
+            if (skipped) {
+                skippedCount++;
+                ctx.out.warn("Pulado explicitamente; não conta como execução verificada. Para retomar: ./quest solve " + lesson.id() + " " + s.id);
+                continue;
+            }
+            s.verify(ctx, v);
             v.print(ctx.out);
+            mark(ctx.keys, lesson.id(), s.id, stateFor(v));
             if (v.ok()) {
                 ok++;
-                if (!skipped) mark(ctx.keys, lesson.id(), s.id, "done");
-            } else if (skipped) {
-                ok++;
-            } else if (firstFailing == null) {
-                firstFailing = s;
+            } else {
+                failed |= !v.unavailable();
+                if (firstFailing == null) firstFailing = s;
             }
         }
         ctx.out.blank();
         if (firstFailing == null) {
+            if (skippedCount > 0) {
+                ctx.out.warn("Lição " + lesson.id() + ": " + ok + " verificados, " + skippedCount + " pulados. Percurso encerrado com passos não verificados.");
+                return EXIT_UNAVAILABLE;
+            }
             ctx.out.ok("Lição " + lesson.id() + " completa: " + ok + " de " + steps.size() + " passos.");
             return 0;
         }
         int number = steps.indexOf(firstFailing) + 1;
-        ctx.out.fail(ok + " de " + steps.size() + " passos. Falta o passo " + number + ": " + firstFailing.title);
+        if (failed) ctx.out.fail(ok + " de " + steps.size() + " passos verificados. Falta o passo " + number + ": " + firstFailing.title);
+        else ctx.out.warn("Verificação parcial: " + ok + " de " + steps.size() + " passos; falta ambiente ou observação para " + firstFailing.title);
         ctx.out.info(firstFailing.instructionFor(ctx));
         if (firstFailing.command != null) ctx.out.cmd(firstFailing.commandFor(ctx));
         ctx.out.hint("Travou? ./quest solve " + lesson.id() + " faz este passo por você. ./quest skip " + lesson.id() + " marca como pulado.");
-        return 1;
+        return failed ? 1 : EXIT_UNAVAILABLE;
     }
 
     /**
@@ -147,7 +161,7 @@ public final class StepEngine {
         }
         Step target = select(steps, selector, progress(ctx.keys, lesson.id()));
         if (target == null) {
-            ctx.out.ok("Nada a resolver: todos os passos da lição " + lesson.id() + " estão concluídos.");
+            ctx.out.info("Sem passos pendentes na lição " + lesson.id() + ": há passos verificados ou pulados. Use ./quest steps " + lesson.id() + " para conferir.");
             return 0;
         }
         int number = steps.indexOf(target) + 1;
@@ -157,17 +171,19 @@ public final class StepEngine {
         try {
             target.solve(ctx);
         } catch (ExerciseStep.RebuildRequested rebuild) {
-            mark(ctx.keys, lesson.id(), target.id, skip ? "skipped" : "done");
+            mark(ctx.keys, lesson.id(), target.id, skip ? "skipped" : "pending");
             ctx.out.info("O quest vai recompilar e rodar o exercício com a solução de referência.");
             return EXIT_REBUILD;
         }
         Verdict v = new Verdict();
         target.verify(ctx, v);
         v.print(ctx.out);
-        mark(ctx.keys, lesson.id(), target.id, skip ? "skipped" : "done");
+        mark(ctx.keys, lesson.id(), target.id, skip ? "skipped" : stateFor(v));
         ctx.out.blank();
-        ctx.out.ok("Passo " + number + (skip ? " pulado" : " resolvido") + ". Veja o próximo com: ./quest start " + lesson.id());
-        return v.ok() ? 0 : 1;
+        if (skip) ctx.out.warn("Passo " + number + " pulado explicitamente, sem contar como verificado. Veja o próximo com: ./quest start " + lesson.id());
+        else if (v.ok()) ctx.out.ok("Passo " + number + " resolvido e verificado. Veja o próximo com: ./quest start " + lesson.id());
+        else ctx.out.warn("Passo " + number + " continua pendente; confira a verificação acima.");
+        return skip ? 0 : v.ok() ? 0 : v.unavailable() ? EXIT_UNAVAILABLE : 1;
     }
 
     private static Step select(List<Step> steps, String selector, Map<String, String> progress) {
@@ -179,7 +195,7 @@ public final class StepEngine {
             throw new IllegalArgumentException("passo desconhecido: " + selector + " (use o número ou o id do passo)");
         }
         for (Step s : steps) {
-            if (!progress.containsKey(s.id)) return s;
+            if (!settled(progress.get(s.id))) return s;
         }
         return null;
     }
@@ -190,17 +206,25 @@ public final class StepEngine {
             List<Step> steps = stepsFor(l);
             if (steps.isEmpty()) continue;
             Map<String, String> progress = progress(keys, l.id());
-            for (Step s : steps) if (!progress.containsKey(s.id)) return Optional.of(l);
+            for (Step s : steps) if (!settled(progress.get(s.id))) return Optional.of(l);
         }
         return Optional.empty();
     }
 
-    /** Steps done or skipped over total, for quest list. */
+    /** Verified steps over total; skipped/unavailable steps are never counted as done. */
     public static int[] counts(Keys keys, Lessons.Lesson lesson, Map<String, String> progress) {
         List<Step> steps = stepsFor(lesson);
         int done = 0;
-        for (Step s : steps) if (progress.containsKey(s.id)) done++;
+        for (Step s : steps) if ("done".equals(progress.get(s.id))) done++;
         return new int[]{done, steps.size()};
+    }
+
+    static boolean settled(String state) {
+        return "done".equals(state) || "skipped".equals(state);
+    }
+
+    static String stateFor(Verdict verdict) {
+        return verdict.ok() ? "done" : verdict.unavailable() ? "unavailable" : "pending";
     }
 
     /** JSON with every lesson's steps, the single source of truth the course site renders. */

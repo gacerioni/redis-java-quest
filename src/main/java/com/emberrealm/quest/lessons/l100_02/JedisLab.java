@@ -8,7 +8,7 @@ import redis.clients.jedis.RedisClient;
 
 /**
  * 100-02 (Jedis): connect from a URL, run SET and GET, close.
- * RedisClient (Jedis 7.2+) replaces JedisPooled/UnifiedJedis and pools connections for you.
+ * RedisClient is the pooled entry point. Jedis 8 negotiates RESP3 with RESP2 fallback.
  */
 public final class JedisLab implements Lab {
 

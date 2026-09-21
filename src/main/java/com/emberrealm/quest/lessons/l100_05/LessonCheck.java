@@ -45,7 +45,7 @@ public final class LessonCheck implements Check {
             if (!marker.isEmpty()) {
                 v.pass("um por vez: " + marker.get("one_by_one_ms") + " ms; pipeline: " + marker.get("pipeline_ms")
                         + " ms (" + marker.get("speedup") + "x mais rápido)");
-                if ("jedis".equals(marker.get("client"))) v.skip("falta experimentar com o Lettuce: ./quest run 100-05 lettuce");
+                if ("jedis".equals(marker.get("client"))) v.info("Opcional: experimente com o Lettuce: ./quest run 100-05 lettuce");
             }
         }
     }

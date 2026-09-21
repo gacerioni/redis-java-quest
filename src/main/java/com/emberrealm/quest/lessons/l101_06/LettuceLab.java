@@ -43,7 +43,7 @@ public final class LettuceLab implements Lab {
                 if (!unknownCommand(e)) throw e;
                 ctx.out.warn("Este servidor não tem o módulo Bloom: " + e.getMessage());
                 ctx.out.hint("Redis 8 (docker compose up -d) e o Redis Cloud já vêm com Bloom. Rode ./quest doctor para ver a versão.");
-                ctx.done("bloom", "unsupported", "ran_" + ctx.client, "1");
+                ctx.unavailable("bloom", "unsupported", "ran_" + ctx.client, "1");
                 return;
             }
             ctx.out.info("Pedimos 1% de erro e espaço para 1000 baús. O Redis calcula o número de bits e de funções de hash por você.");

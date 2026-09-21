@@ -9,7 +9,7 @@ kind: lab
 
 <p class="lesson-meta">Lição 102-03 · Lab · 12 min</p>
 
-Quando o processamento é pesado demais para um worker só, `XREAD` não basta — todo leitor vê tudo. O que você quer é dividir: cada evento para um worker, nenhum esquecido se um worker cair. Consumer groups fazem isso dentro do Redis: o grupo lembra até onde entregou, cada entrega fica pendente até o `XACK`, e `XPENDING` + `XAUTOCLAIM` recuperam o que um worker morto deixou pela metade. É a base de uma fila de trabalho confiável.
+Quando o processamento é pesado demais para um worker só, `XREAD` não basta; todo leitor vê tudo. O que você quer é dividir: cada evento para um worker, nenhum esquecido se um worker cair. Consumer groups fazem isso dentro do Redis: o grupo lembra até onde entregou, cada entrega fica pendente até o `XACK`, e `XPENDING` + `XAUTOCLAIM` recuperam o que um worker morto deixou pela metade. É a base de uma fila de trabalho confiável.
 
 ## O que o lab faz
 

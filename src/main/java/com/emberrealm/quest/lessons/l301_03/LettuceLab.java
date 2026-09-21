@@ -23,14 +23,16 @@ public final class LettuceLab implements Lab {
 
     @Override
     public void run(Ctx ctx) throws Exception {
+        ctx.begin();
         Optional<String> tlsUrl = Env.redisTlsUrl();
         if (tlsUrl.isEmpty()) {
             JedisLab.explain(ctx);
-            ctx.done("tls", "skipped");
+            ctx.unavailable("tls", "skipped");
             return;
         }
 
         String url = tlsUrl.get();
+        JedisLab.requireTlsUrl(url);
         RedisURI uri = RedisURI.create(url);   // rediss:// sets ssl=true, verifyPeer=true
         uri.setSsl(true);
         uri.setTimeout(Duration.ofSeconds(5));
@@ -60,7 +62,7 @@ public final class LettuceLab implements Lab {
             ctx.out.cmd("GET " + probe);
             ctx.out.kv("GET", redis.get(probe));
             ctx.out.info("Mesmos comandos de sempre: o TLS mora na conexão, não no código de negócio.");
-            ctx.done("tls", "ok", "scheme", "rediss", "ca", caPem.isPresent() ? "custom" : "jvm-default");
+            ctx.done("tls", "ok", "tls_schema", "2", "hostname_verified", "true", "scheme", "rediss", "ca", caPem.isPresent() ? "custom" : "jvm-default");
         } finally {
             client.shutdown(Duration.ZERO, Duration.ofSeconds(2));
         }

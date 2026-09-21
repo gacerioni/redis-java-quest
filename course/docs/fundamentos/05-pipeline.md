@@ -9,7 +9,7 @@ kind: lab
 
 <p class="lesson-meta">Lição 100-05 · Lab · 8 min</p>
 
-Gravar 100 itens um por vez são 100 idas e voltas até o Redis: com 1 ms de rede, um décimo de segundo em que o servidor quase não trabalha e o seu código só espera. Um pipeline manda os 100 comandos de uma vez e lê as respostas depois. E quando duas escritas precisam acontecer juntas ou não acontecer — transferir ouro de uma conta para outra — `MULTI`/`EXEC` garante que ninguém veja o meio do caminho.
+Gravar 100 itens um por vez são 100 idas e voltas até o Redis: com 1 ms de rede, um décimo de segundo em que o servidor quase não trabalha e o seu código só espera. Um pipeline manda os 100 comandos de uma vez e lê as respostas depois. E quando duas escritas precisam acontecer juntas ou não acontecer; transferir ouro de uma conta para outra; `MULTI`/`EXEC` garante que ninguém veja o meio do caminho.
 
 ## O que o lab faz
 

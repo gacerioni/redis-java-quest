@@ -9,7 +9,7 @@ kind: lab
 
 <p class="lesson-meta">Lição 101-06 · Lab · 8 min</p>
 
-"Esse item já foi visto?" — responder isso milhões de vezes sem guardar a lista inteira em memória. Um Bloom filter responde com alguns KB: "não" é certeza absoluta; "sim" é "provavelmente", com uma taxa de falso positivo que você escolhe. É uma estrutura probabilística que vem no Redis 8 e no Redis Cloud, com comandos `BF.*`.
+"Esse item já foi visto?"; responder isso milhões de vezes sem guardar a lista inteira em memória. Um Bloom filter responde com alguns KB: "não" é certeza absoluta; "sim" é "provavelmente", com uma taxa de falso positivo que você escolhe. É uma estrutura probabilística que vem no Redis 8 e no Redis Cloud, com comandos `BF.*`.
 
 ## O que o lab faz
 

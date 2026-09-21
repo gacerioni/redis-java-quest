@@ -9,7 +9,7 @@ kind: lab
 
 <p class="lesson-meta">Lição 201-01 · Lab · 12 min</p>
 
-Responder "espadas raras até o nível 40, mais baratas primeiro" em milissegundos sobre documentos JSON — sem índice, a única saída seria varrer todas as chaves na aplicação. O Redis Query Engine cria um índice secundário: um `FT.CREATE` declara quais campos são texto, tag, número ou vetor, e cada `JSON.SET` alimenta o índice sozinho. `FT.SEARCH` filtra, ordena e devolve só os campos que a tela precisa.
+Responder "espadas raras até o nível 40, mais baratas primeiro" em milissegundos sobre documentos JSON; sem índice, a única saída seria varrer todas as chaves na aplicação. O Redis Query Engine cria um índice secundário: um `FT.CREATE` declara quais campos são texto, tag, número ou vetor, e cada `JSON.SET` alimenta o índice sozinho. `FT.SEARCH` filtra, ordena e devolve só os campos que a tela precisa.
 
 ## O que o lab faz
 

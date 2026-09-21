@@ -9,12 +9,12 @@ window.QUEST.courses = [
 ];
 window.QUEST.lessons = [
   { id: "setup", course: "100", title: "Do zero ao primeiro comando", url: "comece-aqui/", minutes: 15 },
-  { id: "100-01", course: "100", title: "O mapa do mundo", url: "fundamentos/01-mapa-do-mundo/", minutes: 8 },
+  { id: "100-01", course: "100", title: "Topologias: Open Source, Cloud e Software", url: "fundamentos/01-mapa-do-mundo/", minutes: 8 },
   { id: "100-02", course: "100", title: "Conectar com Jedis e Lettuce", url: "fundamentos/02-conectar/", minutes: 8 },
   { id: "100-03", course: "100", title: "Redis Insight", url: "fundamentos/03-redis-insight/", minutes: 6 },
   { id: "100-04", course: "100", title: "Chaves, TTL e SCAN", url: "fundamentos/04-chaves-ttl-scan/", minutes: 8 },
   { id: "100-05", course: "100", title: "Pipeline", url: "fundamentos/05-pipeline/", minutes: 8 },
-  { id: "101-01", course: "101", title: "String", url: "101-tipos/01-string/", minutes: 8 },
+  { id: "101-01", course: "101", title: "String", url: "101-tipos/01-string/", minutes: 15 },
   { id: "101-02", course: "101", title: "Hash", url: "101-tipos/02-hash/", minutes: 8 },
   { id: "101-03", course: "101", title: "List", url: "101-tipos/03-list/", minutes: 8 },
   { id: "101-04", course: "101", title: "Set", url: "101-tipos/04-set/", minutes: 8 },

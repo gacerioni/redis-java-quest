@@ -9,7 +9,7 @@ kind: lab
 
 <p class="lesson-meta">Lição 301-05 · Lab · 12 min</p>
 
-Usuários em São Paulo e Lisboa, nenhum aceitando 200 ms por operação. Active-Active resolve no servidor: réplicas em cada região, todas aceitando leitura e escrita locais, sincronizadas por CRDTs que reconciliam escritas concorrentes sem coordenador central. Na aplicação sobra uma pergunta: se a réplica da minha região cair, quem escolhe a outra? O Jedis 7+ responde com o `MultiDbClient`; o Lettuce 7.7 traz a ideia em preview.
+Usuários em São Paulo e Lisboa, nenhum aceitando 200 ms por operação. Active-Active resolve no servidor: réplicas em cada região, todas aceitando leitura e escrita locais, sincronizadas por CRDTs que reconciliam escritas concorrentes sem coordenador central. Na aplicação sobra uma pergunta: se a réplica da minha região cair, quem escolhe a outra? O Jedis oferece `MultiDbClient` como recurso **experimental**; no Lettuce 7.7 ele está em preview. Nesta lição, dois Redis locais independentes demonstram o failover do client, sem replicação CRDT.
 
 ```mermaid
 flowchart LR
@@ -27,7 +27,7 @@ flowchart LR
 
 - Subir dois "datacenters" locais, `east` (6391) e `west` (6392), com `docker compose --profile failover up -d`
 - Configurar pesos 1.0 e 0.5, health check por `PING`, circuit breaker, retry e failback
-- Rodar um heartbeat (`SET quest:heartbeat` a cada 500 ms por 6 s) que imprime qual região atendeu
+- Rodar um heartbeat (`SET quest:heartbeat` a cada 500 ms por 20 s) que imprime qual região atendeu
 - Derrubar o east em outro terminal, ver a troca, subir de novo e ver o failback
 - Repetir com o `MultiDbClient` do Lettuce (preview) e ler os eventos de troca no event bus
 
@@ -47,7 +47,9 @@ docker stop quest-redis-east      # a troca para west aparece em 1 a 2 s
 docker start quest-redis-east     # o failback para east vem depois da carência de 2 s
 ```
 
-Para usar dois bancos seus (duas réplicas Active-Active, por exemplo), defina `QUEST_EAST_URL` e `QUEST_WEST_URL`. Se nenhum dos dois responder, o lab explica e se marca como pulado.
+Para usar dois bancos seus (duas réplicas Active-Active, por exemplo), defina `QUEST_EAST_URL` e `QUEST_WEST_URL`. Se os bancos não estiverem disponíveis, o lab fica pendente. O `verify` separa heartbeat, failover e failback: uma escrita bem-sucedida sozinha não comprova troca de região.
+
+Comece com os dois bancos ativos. Depois da primeira batida no east, pare o east; quando houver escrita confirmada no west, restaure o east e espere uma nova escrita nele. Só essa sequência comprova failover e failback. Para ter mais tempo, configure `QUEST_FAILOVER_SECONDS=60` no `.env` (intervalo permitido: 5 a 300 segundos).
 
 ## O código
 
@@ -79,7 +81,7 @@ Para usar dois bancos seus (duas réplicas Active-Active, por exemplo), defina `
             .databaseSwitchListener(event -> System.out.println(
                     "switched to " + event.getEndpoint() + " (" + event.getReason() + ")"))
             .build()) {
-        for (int i = 1; i <= 12; i++) {
+        for (int i = 1; i <= 40; i++) {
             client.set(heartbeat, Instant.now().toString());
             System.out.println("beat " + i + " -> " + client.getActiveDatabaseEndpoint());
             Thread.sleep(500);
@@ -114,7 +116,7 @@ Para usar dois bancos seus (duas réplicas Active-Active, por exemplo), defina `
             .subscribe(event -> System.out.println(event.getFromDb() + " -> " + event.getToDb() + " (" + event.getReason() + ")"));
 
     try (StatefulRedisMultiDbConnection<String, String> connection = client.connect()) {
-        for (int i = 1; i <= 12; i++) {
+        for (int i = 1; i <= 40; i++) {
             connection.sync().set(heartbeat, Instant.now().toString());
             System.out.println("beat " + i + " -> " + connection.getCurrentEndpoint());
             Thread.sleep(500);
@@ -141,9 +143,9 @@ Adicione os dois bancos locais no Insight (`localhost:6391` e `localhost:6392`).
 
 ??? tip "Em produção"
 
-    - Active-Active é recurso do Redis Software e do Redis Cloud (plano Pro): cada região lê e escreve na sua réplica com latência local, e a replicação CRDT reconcilia contadores, conjuntos e strings sem coordenador. O RPO fica próximo de zero e o RTO passa a ser decisão do client: é para isso que servem os pesos, o health check e o failback.
-    - `MultiDbClient` no Jedis (7+) usa resilience4j: no Maven, além de `resilience4j-circuitbreaker` e `resilience4j-retry`, inclua `resilience4j-all` (é de onde vem a classe `Decorators`). Os padrões do client são conservadores (janela do circuit breaker de 2 s com mínimo de 1000 falhas, carência de 60 s, failback a cada 2 min); o lab encurta tudo para caber em 6 s. Em produção, aumente a carência para evitar flapping e avalie `LagAwareStrategy` (preview, Redis Software) para não voltar para uma réplica atrasada.
-    - Lettuce 7.7 traz `io.lettuce.core.failover.MultiDbClient` em preview, com a mesma semântica (pesos, circuit breaker por banco, `PingStrategy`, failback e eventos no event bus). A alternativa sem código fica no servidor: o Redis Cloud redireciona dinamicamente o endpoint da réplica Active-Active que caiu para a réplica saudável, e é por isso que a [lição 301-01](01-timeouts-pool-retry.md) mandou desligar o cache de DNS da JVM. SCH ([lição 301-04](04-smart-client-handoffs.md)) fica desligado quando o client está em modo failover.
+    - Active-Active é recurso do Redis Software e do Redis Cloud (plano Pro): cada região lê e escreve na sua réplica com latência local, e a replicação CRDT reconcilia contadores, conjuntos e strings sem coordenador. A replicação entre regiões é assíncrona. O RPO e o tempo de recuperação dependem da rede, do atraso de replicação e da detecção de falha, além da configuração do client. Avalie essas condições para o seu workload.
+    - `MultiDbClient` no Jedis é [experimental](https://redis.github.io/jedis/failover/) e usa resilience4j: no Maven, além de `resilience4j-circuitbreaker` e `resilience4j-retry`, inclua `resilience4j-all` (é de onde vem a classe `Decorators`). Os padrões do client são conservadores (janela do circuit breaker de 2 s com mínimo de 1000 falhas, carência de 60 s, failback a cada 2 min); o lab usa janelas curtas e um heartbeat de 20 s para permitir observar ida e volta. Em produção, aumente a carência para evitar flapping e avalie `LagAwareStrategy` (preview, Redis Software) para não voltar para uma réplica atrasada.
+    - Lettuce 7.7 traz `io.lettuce.core.failover.MultiDbClient` em preview, com a mesma semântica (pesos, circuit breaker por banco, `PingStrategy`, failback e eventos no event bus). A alternativa sem código fica no servidor: o Redis Cloud redireciona dinamicamente o endpoint da réplica Active-Active que caiu para a réplica saudável, e a [lição 301-01](01-timeouts-pool-retry.md) configura a política de DNS antes da primeira conexão. SCH ([lição 301-04](04-smart-client-handoffs.md)) fica desligado quando o client está em modo failover.
 
 ??? tip "Desafio"
 

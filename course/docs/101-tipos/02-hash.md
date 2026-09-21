@@ -9,7 +9,7 @@ kind: lab
 
 <p class="lesson-meta">Lição 101-02 · Lab · 8 min</p>
 
-Uma ficha com nome, classe, nível, HP, ouro: guardar como String JSON obriga ler e reescrever o documento inteiro para mudar um campo; uma chave por atributo espalha a ficha e multiplica viagens. O Hash fica no meio — uma chave, vários campos, cada campo lido, escrito ou incrementado sozinho, no servidor. Desde o Redis 7.4 um campo pode ter prazo próprio: o buff expira, o resto da ficha fica.
+Uma ficha com nome, classe, nível, HP, ouro: guardar como String JSON obriga ler e reescrever o documento inteiro para mudar um campo; uma chave por atributo espalha a ficha e multiplica viagens. O Hash fica no meio; uma chave, vários campos, cada campo lido, escrito ou incrementado sozinho, no servidor. Desde o Redis 7.4 um campo pode ter prazo próprio: o buff expira, o resto da ficha fica.
 
 ## O que o lab faz
 

@@ -1,21 +1,21 @@
 ---
 lesson: 101-05
 title: "Sorted Set: ranking sem ORDER BY"
-minutes: 10
+minutes: 8
 kind: lab
 no_steps: true
 next_url: trilha/07-proximos-passos/
 next_title: "E agora?"
-state_text: "Rodou o lab e o verify passou? Marque como concluído."
+state_text: "Rodou o lab e o verify passou? Registre seu estudo."
 ---
 
 # Sorted Set: ranking sem ORDER BY
 
-<p class="lesson-meta">Trilha do workshop · Passo 6 de 6 · ~10 min · <a href="../101-tipos/05-sorted-set/">versão completa</a></p>
+<p class="lesson-meta">Demo junto com Hash · 42-50 min · <a href="../../101-tipos/05-sorted-set/">versão completa</a></p>
 
-Cada membro de um Sorted Set é único e carrega um score; o Redis mantém a ordem a cada escrita. Top 10, posição de alguém, faixa de score: tudo O(log N), sem `ORDER BY` a cada consulta. É o tipo por trás de rankings, filas priorizadas e séries temporais simples.
+Cada membro de um Sorted Set é único e carrega um score; o Redis mantém a ordem a cada escrita. Posição de alguém custa O(log N); retornar uma faixa custa O(log N + M), sendo M a quantidade de resultados. O índice já mantém a ordenação, sem `ORDER BY` a cada consulta. É o tipo por trás de rankings, filas priorizadas e séries temporais simples.
 
-## Faça agora
+## Acompanhe a demonstração
 
 ```bash
 ./quest run 101-05 jedis
@@ -38,7 +38,7 @@ long faixa = jedis.zcount(rank, 100_000, 600_000);        // quantos nessa faixa
 List<Tuple> grupo = jedis.zrangeByScoreWithScores(rank, 100_000, 600_000);
 ```
 
-`ZINCRBY` passa no fio como um comando só — não existe leitura, soma e reescrita. Por isso milhares de updates por segundo não criam condição de corrida.
+`ZINCRBY` passa no fio como um comando só; não existe leitura, soma e reescrita. Por isso milhares de updates por segundo não criam condição de corrida.
 
 ??? note "E o Lettuce?"
 
@@ -48,6 +48,6 @@ List<Tuple> grupo = jedis.zrangeByScoreWithScores(rank, 100_000, 600_000);
     Abra `quest:rank:xp`: os membros já aparecem ordenados por score. No Workbench, experimente `ZRANGE quest:rank:xp 0 9 REV WITHSCORES` (a forma moderna do `ZREVRANGE`).
 
 ??? tip "Para ir além"
-    - Empate no score? Os membros ficam em ordem alfabética. Para desempatar por "quem chegou antes", embute o timestamp na parte fracionária do score.
+    - Empate no score? A ordem é lexicográfica por bytes (invertida com `REV`). Um desempate por horário exige modelar o score ou o membro com cuidado e considerar a precisão do double.
     - Ranking por temporada: uma chave por semana (`rank:xp:2026-w37`) com `EXPIRE`, em vez de zerar o global.
     - Score é double: inteiros exatos até 2^53. Mais detalhes na [lição completa 101-05](../101-tipos/05-sorted-set.md).

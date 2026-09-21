@@ -19,12 +19,18 @@ public final class LessonCheck implements Check {
 
             String tls = marker.get("tls");
             if ("ok".equals(tls)) {
-                v.pass("conexão TLS validada com " + marker.get("client") + " (" + marker.get("scheme") + "://, CA " + marker.get("ca") + ")");
+                v.expect(validatedTls(marker), "conexão TLS e hostname validados com " + marker.get("client") + " (" + marker.get("scheme") + "://, CA " + marker.get("ca") + ")",
+                        "marcador antigo ou sem comprovação de TLS: configure rediss:// e rode a lição de novo");
             } else if ("skipped".equals(tls)) {
                 v.skip("sem REDIS_TLS_URL a lição foi pulada: o plano free não tem TLS. Com um plano pago, configure a variável e rode de novo.");
             } else {
                 v.fail("o marcador tem tls=" + tls + ", esperado ok ou skipped", "rode a lição de novo");
             }
         }
+    }
+
+    static boolean validatedTls(Map<String, String> marker) {
+        return "ran".equals(marker.get("status")) && "ok".equals(marker.get("tls")) && "rediss".equals(marker.get("scheme"))
+                && "2".equals(marker.get("tls_schema")) && "true".equals(marker.get("hostname_verified"));
     }
 }

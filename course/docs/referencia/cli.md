@@ -11,16 +11,20 @@ O `quest` é um wrapper fino sobre `java -jar target/quest.jar`. Ele compila o p
 | `./quest start <id>` | Prepara a lição (semeia se preciso, roda o setup dos passos) e mostra os passos com o próximo a fazer |
 | `./quest verify <id>` | Confere cada passo no seu Redis, marca os concluídos e aponta o que falta (`verify all` para tudo) |
 | `./quest solve <id> [passo]` | Faz o próximo passo por você (roda o lab, executa o comando ou copia a solução do exercício e roda) |
-| `./quest skip <id> [passo]` | Igual ao `solve`, mas marca o passo como pulado |
+| `./quest skip <id> [passo]` | Pula explicitamente um passo; ele permite seguir, mas não conta como verificado |
 | `./quest next` | Vai para a primeira lição com passo pendente |
 | `./quest run <id> jedis` ou `lettuce` ou `both` | Roda o lab pronto da lição |
-| `./quest exercise <id> jedis` ou `lettuce` | Roda o SEU código do exercício (`JedisExercise` / `LettuceExercise`) |
+| `./quest exercise 101-01 jedis` ou `lettuce` | Roda o SEU código do exercício de String, único exercício com arquivo para completar atualmente |
 | `./quest list` | Lições por curso com os passos concluídos |
 | `./quest seed` | Carrega o mundo Ember Realm no seu prefixo (idempotente) |
 | `./quest reset --yes` | Apaga todas as chaves do seu prefixo |
 | `./quest doctor` | Relatório de conexão |
 
 Ciclo de vida de cada passo, no estilo dos labs guiados: `start` prepara, você age, `verify` confere, `solve` faz por você quando travar, `skip` pula. O progresso dos passos fica no hash `{prefixo}:steps:<id>` do seu Redis.
+
+`verify` distingue **verificado**, **pendente/indisponível** e **falhou**. Recurso ausente, TLS sem configuração ou failover não observado não viram conclusão automática. A comparação opcional com o segundo client não bloqueia o avanço. O botão do site é um registro pessoal de estudo no navegador, separado dessas evidências.
+
+Códigos de saída: `0` para verificações concluídas, `1` para falha e `3` para verificação pendente ou recurso indisponível.
 
 No Windows, troque `./quest` por `quest.cmd`.
 
@@ -30,12 +34,14 @@ No Windows, troque `./quest` por `quest.cmd`.
 |---|---|---|
 | `REDIS_URL` | `redis://localhost:6379` | URL do Redis: `redis://usuario:senha@host:porta` ou `rediss://` com TLS |
 | `QUEST_PREFIX` | usuário da URL, ou `quest` | Prefixo de todas as chaves. Em um banco compartilhado, um por pessoa |
-| `REDIS_TLS_URL` | vazio | Lição 301-03. URL `rediss://` de um banco pago |
+| `REDIS_TLS_URL` | vazio | Lição 301-03. URL obrigatoriamente `rediss://` de um banco com TLS |
+| `REDIS_TLS_CA_PEM` | vazio | CA própria em PEM, quando não está no truststore da JVM |
 | `OLLAMA_URL` | `http://localhost:11434` | Lição 201-03. Ollama local para vetorizar perguntas novas |
 | `QUEST_WAITERS` | `5` | Lição 102-04. Quantos jogadores esperam bloqueados na fila |
 | `QUEST_EAST_URL` e `QUEST_WEST_URL` | `redis://localhost:6391` e `6392` | Lição 301-05. Os dois "datacenters" do failover |
+| `QUEST_FAILOVER_SECONDS` | `20` | Lição 301-05. Duração do heartbeat, de 5 a 300 segundos |
 | `NO_COLOR` | vazio | Desliga as cores da saída |
 
 ## Rodando pela IDE
 
-Cada lição é uma classe com `main` em `src/main/java/com/emberrealm/quest/lessons/l<id>/`. A classe de entrada é `com.emberrealm.quest.core.Main`, com os argumentos acima (`run 101-02 jedis`). O `.env` da raiz é lido automaticamente.
+Execute a classe `com.emberrealm.quest.core.Main`, passando por exemplo `run 101-02 jedis` nos argumentos do programa. Use a raiz do projeto como diretório de trabalho para ler o `.env`. As implementações de `Lab` ficam em `src/main/java/com/emberrealm/quest/lessons/l<id>/`; elas não possuem `main` próprio.

@@ -1,105 +1,95 @@
 ---
 lesson: 301-03
-title: "TLS"
+title: "TLS: certificado e identidade do servidor"
 minutes: 8
 kind: lab
 ---
 
-# TLS
+# TLS: certificado e identidade do servidor
 
 <p class="lesson-meta">Lição 301-03 · Lab · 8 min</p>
 
-Em produção o Redis fica atrás de TLS: a URL vira `rediss://`, o client valida o certificado do servidor e o resto do código não muda. Esta é a única lição do curso que depende de plano pago — o plano free do Redis Cloud não oferece TLS. Sem `REDIS_TLS_URL`, o lab explica o que você faria e se marca como pulado.
+TLS protege o tráfego e permite verificar **com quem a aplicação está falando**. O lab exige `rediss://`, valida a cadeia de certificados e confere se o hostname da URL está no certificado. Uma URL `redis://` é rejeitada antes de conectar.
 
-## O que o lab faz
-
-- Entender o que muda no `rediss://`: certificado, CA e verificação do servidor
-- Ver onde o Redis Cloud entrega o `redis_ca.pem` e por que a JVM já confia nele
-- Com `REDIS_TLS_URL` definida: conectar, `PING`, `SET` e `GET` em `quest:tls:probe` nos dois clients
-- Opcional: apontar `REDIS_TLS_CA_PEM` para uma CA própria e ver os dois clients confiarem nela
+No Redis Cloud, o plano free não oferece TLS; use um banco com TLS em plano pago ou um ambiente TLS local. Sem `REDIS_TLS_URL`, a lição explica o preparo e fica **pendente**, sem registrar uma conexão segura que não aconteceu.
 
 ## Faça agora
 
-```bash
-./quest run 301-03 jedis
-./quest run 301-03 lettuce    # opcional: mesmo lab, outro client
-./quest verify 301-03
-```
-
-Com um banco pago, coloque no `.env` antes de rodar:
+Configure no `.env`:
 
 ```bash
 REDIS_TLS_URL=rediss://default:SENHA@host:porta
-# opcional, só se o servidor usar uma CA fora do truststore da JVM
+# Defina quando a CA não estiver no truststore da JVM:
 REDIS_TLS_CA_PEM=/caminho/redis_ca.pem
 ```
+
+```bash
+./quest run 301-03 jedis
+./quest run 301-03 lettuce    # comparação opcional
+./quest verify 301-03
+```
+
+O resultado esperado é `PONG`, escrita e leitura de `quest:tls:probe` através de TLS. O `verify` exige evidência da versão atual do lab, incluindo a verificação de hostname. Um marcador antigo não comprova essa proteção.
 
 ## O código
 
 === "Jedis"
 
     ```java
-    // the JVM truststore already trusts the GlobalSign root used by Redis Cloud
-    RedisClient jedis = RedisClient.create("rediss://default:SENHA@host:porta");
+    URI uri = requireTlsUrl(url);   // rejects redis:// and missing host
+    SSLParameters parameters = new SSLParameters();
+    parameters.setEndpointIdentificationAlgorithm("HTTPS"); // verifies certificate hostname
 
-    // custom CA: build a truststore in memory from the PEM bundle
-    SSLSocketFactory factory = socketFactoryFromPem(Path.of(caPem));   // CertificateFactory + KeyStore + TrustManagerFactory
-    DefaultJedisClientConfig config = DefaultJedisClientConfig.builder()
+    DefaultJedisClientConfig.Builder config = DefaultJedisClientConfig.builder()
             .user(user).password(password)
             .ssl(true)
-            .sslSocketFactory(factory)
-            .build();
-    RedisClient jedis = RedisClient.builder()
-            .hostAndPort(new HostAndPort(host, port))
-            .clientConfig(config)
-            .build();
-
-    jedis.ping();                                  // PONG over TLS
-    jedis.set(probe, Instant.now().toString());
-    jedis.get(probe);
+            .sslParameters(parameters)
+            .connectionTimeoutMillis(2000).socketTimeoutMillis(5000);
+    if (caPem != null) {
+        config.sslSocketFactory(socketFactoryFromPem(Path.of(caPem)));
+    }
+    try (RedisClient jedis = RedisClient.builder()
+            .hostAndPort(new HostAndPort(uri.getHost(), port))
+            .clientConfig(config.build()).build()) {
+        jedis.ping();
+        jedis.set(probe, Instant.now().toString());
+        jedis.get(probe);
+    }
     ```
+
+    O helper `socketFactoryFromPem` do lab carrega o bundle em um truststore em memória. A verificação de hostname continua ligada mesmo com CA própria. O nome `HTTPS` é o algoritmo de identificação do endpoint na API Java; a conexão continua usando o protocolo Redis sobre TLS.
 
 === "Lettuce"
 
     ```java
-    RedisURI uri = RedisURI.create("rediss://default:SENHA@host:porta");   // ssl=true, verifyPeer=true
+    requireTlsUrl(url);
+    RedisURI uri = RedisURI.create(url);   // rediss://, peer verification enabled
     uri.setTimeout(Duration.ofSeconds(5));
-
     ClientOptions.Builder options = ClientOptions.builder();
     if (caPem != null) {
-        options.sslOptions(SslOptions.builder().trustManager(new File(caPem)).build());   // PEM accepted directly
+        options.sslOptions(SslOptions.builder().trustManager(new File(caPem)).build());
     }
-
     RedisClient client = RedisClient.create(uri);
     client.setOptions(options.build());
     try (StatefulRedisConnection<String, String> connection = client.connect()) {
         RedisCommands<String, String> redis = connection.sync();
-        redis.ping();                              // PONG over TLS
+        redis.ping();
         redis.set(probe, Instant.now().toString());
         redis.get(probe);
+    } finally {
+        client.shutdown();
     }
     ```
 
+## CA confiável e hostname correto
+
+São verificações diferentes. Confiar na CA não autoriza um certificado emitido para outro hostname. No Cloud, baixe o bundle `redis_ca.pem` do seu banco quando necessário: endpoints com cadeia pública compatível podem funcionar com o truststore da JVM; CAs legadas ou próprias podem exigir o bundle. Não presuma isso apenas pelo nome do produto.
+
+TLS mútuo adiciona o certificado do client e é uma configuração separada. Estes exemplos verificam a identidade do servidor; não configuram mTLS.
+
 ## No Redis Insight
 
-Adicione o banco TLS no Insight marcando "Use TLS" e, se a CA for própria, colando o conteúdo do `redis_ca.pem` em "CA Certificate". No Browser, `quest:tls:probe` aparece com o instante da última rodada. No Workbench, `INFO server` responde normalmente: o TLS é invisível para os comandos, e essa é exatamente a ideia. Sem `REDIS_TLS_URL`, a lição não cria chave nenhuma: só o marcador `quest:progress:301-03` com `tls=skipped`.
+Adicione o banco com TLS habilitado e, se necessário, a CA do banco. Observe `quest:tls:probe` depois de rodar. Sem `REDIS_TLS_URL`, não existe probe TLS: apenas a evidência de que essa etapa está indisponível no ambiente atual. `verify` retorna pendência, não sucesso.
 
-??? note "Por dentro"
-
-    | Comando | O que faz |
-    |---|---|
-    | `rediss://` | Mesma URL, com um `s`: o client abre TLS antes do handshake do Redis |
-    | `PING` | Primeiro comando dentro do túnel: se o certificado não fosse confiável, ele nem chegaria |
-    | `SET quest:tls:probe <instante>` | Prova de escrita pela conexão segura |
-    | `GET quest:tls:probe` | Prova de leitura pela mesma conexão |
-    | `HSET quest:progress:301-03 tls ok` | O marcador que o `verify` lê (`ok` ou `skipped`) |
-
-??? tip "Em produção"
-
-    - Redis Cloud: TLS está nos planos pagos Essentials e Pro. Ative na configuração do banco e baixe o `redis_ca.pem` no console. O bundle traz uma raiz GlobalSign, pública e já presente no truststore da JVM, mais as CAs legadas do Redis Cloud; por isso `RedisClient.create("rediss://...")` funciona sem configurar nada. TLS mútuo (certificado do client) é opcional e só entra se você ligar a autenticação de client no banco.
-    - Sem `SslOptions`, o Jedis usa o truststore padrão da JVM; para uma CA própria, o caminho documentado é `keytool -importcert` gerando um `truststore.jks` e `SslOptions.builder().truststore(new File("truststore.jks"), senha.toCharArray())`. O lab monta o truststore em memória a partir do PEM para não depender do `keytool`.
-    - Mantenha a verificação do certificado ligada (o padrão nos dois clients). Desligar resolve o erro do dia e abre a porta para um ataque de interceptação amanhã.
-
-??? tip "Desafio"
-
-    Suba um Redis com TLS na sua máquina (`redis-server --port 0 --tls-port 6395` com um certificado próprio para `localhost`), aponte `REDIS_TLS_URL=rediss://localhost:6395` e rode sem `REDIS_TLS_CA_PEM`: os dois clients recusam o certificado autoassinado. Depois defina `REDIS_TLS_CA_PEM` com a sua CA e veja o `PONG` chegar.
+??? tip "Experimente depois"
+    Num Redis local com TLS, teste três casos: CA não confiável deve falhar; CA confiável com hostname incorreto deve falhar; CA e hostname corretos devem chegar ao PONG. Nunca resolva esses erros desabilitando a verificação do peer.

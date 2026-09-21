@@ -9,7 +9,7 @@ kind: lab
 
 <p class="lesson-meta">Lição 101-01 · Lab + sua vez · 15 min</p>
 
-Sessão, cooldown, contador: três problemas clássicos de backend resolvidos com o tipo mais simples do Redis — uma String, um valor por chave, com prazo de vida opcional. A graça está nos detalhes: `SET ... EX` cria uma chave que morre sozinha, `SET ... NX EX` implementa um cooldown sem condição de corrida e `INCR` soma sem ler o valor antes.
+Sessão, cooldown, contador: três problemas clássicos de backend resolvidos com o tipo mais simples do Redis; uma String, um valor por chave, com prazo de vida opcional. A graça está nos detalhes: `SET ... EX` cria uma chave que morre sozinha, `SET ... NX EX` implementa um cooldown sem condição de corrida e `INCR` soma sem ler o valor antes.
 
 ## Veja funcionando
 
@@ -104,10 +104,10 @@ Regras do método:
 | A cura só sai se a chave `{p}:cooldown:kaelith:heal` ainda não existe | duas curas seguidas: só a primeira pode sair |
 | Quando sai, a chave nasce com TTL de 8 segundos | `TTL` da chave entre 0 e 8 |
 | Quando sai, `{p}:heals:kaelith` cresce em 1 | o contador tem que valer exatamente 1 |
-| Checar e gravar acontecem em um único comando | é a mesma ideia do `SET ... NX EX` que você viu no lab |
+| Checar e gravar acontecem em um único comando | revise o uso de `SET ... NX EX`; duas chamadas sequenciais não provam segurança sob concorrência |
 | Devolve `true` quando a cura saiu, `false` em cooldown | a saída do exercício mostra os dois valores |
 
-O resto do arquivo é o arnês: limpa as chaves, chama `castHeal` duas vezes seguidas, mostra o resultado e registra o exercício para o verify. Não precisa mexer nele.
+O restante do arquivo prepara e registra a execução: limpa as chaves, chama `castHeal` duas vezes seguidas, mostra o resultado e registra o exercício para o verify. Não precisa mexer nele.
 
 ```bash
 ./quest exercise 101-01 jedis      # ou lettuce
@@ -115,6 +115,8 @@ O resto do arquivo é o arnês: limpa as chaves, chama `castHeal` duas vezes seg
 ```
 
 Enquanto o método não estiver implementado, o `exercise` para com o aviso "Sua vez: implemente castHeal" e o `verify` marca a parte "Sua vez" em vermelho. Quando passar, o `verify` mostra as três linhas verdes da sua vez. Travou? `./quest solve 101-01 --yes` copia a solução de referência por cima do seu arquivo.
+
+O `SET NX EX` torna a decisão do cooldown atômica. O `INCR` que vem depois é outro comando: se o processo falhar entre os dois, a contagem pode não acompanhar o cooldown. O exercício não promete atomicidade conjunta nem entrega exatamente uma vez.
 
 Quer ir além: faça `castHeal` devolver também quantos segundos faltam para poder curar de novo (`TTL`) e mostre isso na saída.
 

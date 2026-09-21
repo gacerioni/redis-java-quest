@@ -41,7 +41,7 @@
     box.appendChild(btn); box.appendChild(error); box.appendChild(result);
 
     var previous = P.load().quiz[course];
-    if (previous) result.textContent = "Última tentativa: " + previous.score + " de " + previous.total + (previous.passed ? ". Curso concluído." : ".");
+    if (previous) result.textContent = "Última tentativa: " + previous.score + " de " + previous.total + (previous.passed ? ". Knowledge check concluído." : ".");
 
     btn.addEventListener("click", function () {
       error.textContent = "";
@@ -62,7 +62,7 @@
       var current = courses.find(function (c) { return c.id === course; });
       var next = current && current.next ? courses.find(function (c) { return c.id === current.next; }) : null;
       result.innerHTML = "Você acertou " + score + " de " + questions.length + ". " +
-        (passed ? "Curso concluído." : "Revise as lições marcadas e tente de novo.") +
+        (passed ? "Knowledge check concluído." : "Revise as lições marcadas e tente de novo.") +
         (passed && next ? ' <a class="quest-btn" href="' + P.urlOf(next.url) + '">Próximo curso: ' + next.name + "</a>" : "");
       P.renderAll();
     });

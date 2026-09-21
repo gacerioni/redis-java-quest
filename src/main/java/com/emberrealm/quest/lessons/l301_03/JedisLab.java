@@ -9,6 +9,7 @@ import redis.clients.jedis.RedisClient;
 import redis.clients.jedis.util.JedisURIHelper;
 
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.IOException;
@@ -33,29 +34,26 @@ public final class JedisLab implements Lab {
 
     @Override
     public void run(Ctx ctx) throws Exception {
+        ctx.begin();
         Optional<String> tlsUrl = Env.redisTlsUrl();
         if (tlsUrl.isEmpty()) {
             explain(ctx);
-            ctx.done("tls", "skipped");
+            ctx.unavailable("tls", "skipped");
             return;
         }
 
         String url = tlsUrl.get();
-        URI uri = URI.create(url);
+        URI uri = requireTlsUrl(url);
         ctx.out.step("Conectando com " + uri.getScheme() + ":// em " + Env.redacted(url));
         Optional<String> caPem = Env.optional(CA_PEM_VAR);
-        RedisClient jedis;
+        DefaultJedisClientConfig.Builder builder = configFrom(uri);
         if (caPem.isPresent()) {
             ctx.out.info("CA própria em " + caPem.get() + ": montando um truststore em memória a partir do PEM");
-            DefaultJedisClientConfig config = configFrom(uri)
-                    .ssl(true)
-                    .sslSocketFactory(socketFactoryFromPem(Path.of(caPem.get())))
-                    .build();
-            jedis = RedisClient.builder().hostAndPort(hostAndPort(uri)).clientConfig(config).build();
+            builder.sslSocketFactory(socketFactoryFromPem(Path.of(caPem.get())));
         } else {
-            ctx.out.info("Sem CA própria: RedisClient.create(url) usa o truststore da JVM, que já confia na raiz GlobalSign do Redis Cloud");
-            jedis = RedisClient.create(url);
+            ctx.out.info("Sem CA própria: usando o truststore da JVM; endpoints com CA legada precisam do bundle redis_ca.pem.");
         }
+        RedisClient jedis = RedisClient.builder().hostAndPort(hostAndPort(uri)).clientConfig(builder.build()).build();
         try (jedis) {
             ctx.out.cmd("PING");
             ctx.out.kv("PING", jedis.ping());
@@ -66,7 +64,7 @@ public final class JedisLab implements Lab {
             ctx.out.cmd("GET " + probe);
             ctx.out.kv("GET", jedis.get(probe));
             ctx.out.info("Mesmos comandos de sempre: o TLS mora na conexão, não no código de negócio.");
-            ctx.done("tls", "ok", "scheme", uri.getScheme(), "ca", caPem.isPresent() ? "custom" : "jvm-default");
+            ctx.done("tls", "ok", "tls_schema", "2", "hostname_verified", "true", "scheme", "rediss", "ca", caPem.isPresent() ? "custom" : "jvm-default");
         }
     }
 
@@ -103,12 +101,24 @@ public final class JedisLab implements Lab {
     }
 
     static DefaultJedisClientConfig.Builder configFrom(URI uri) {
-        DefaultJedisClientConfig.Builder builder = DefaultJedisClientConfig.builder();
+        requireTlsUrl(uri.toString());
+        SSLParameters parameters = new SSLParameters();
+        parameters.setEndpointIdentificationAlgorithm("HTTPS");
+        DefaultJedisClientConfig.Builder builder = DefaultJedisClientConfig.builder()
+                .ssl(true).sslParameters(parameters).connectionTimeoutMillis(2000).socketTimeoutMillis(5000);
         String user = JedisURIHelper.getUser(uri);
         String password = JedisURIHelper.getPassword(uri);
         if (user != null) builder.user(user);
         if (password != null) builder.password(password);
         if (JedisURIHelper.hasDbIndex(uri)) builder.database(JedisURIHelper.getDBIndex(uri));
         return builder;
+    }
+
+    static URI requireTlsUrl(String url) {
+        URI uri = URI.create(url);
+        if (!"rediss".equalsIgnoreCase(uri.getScheme()) || uri.getHost() == null) {
+            throw new IllegalArgumentException("REDIS_TLS_URL precisa ser rediss://usuario:senha@host:porta. redis:// não usa TLS.");
+        }
+        return uri;
     }
 }

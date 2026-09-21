@@ -24,12 +24,12 @@ import java.util.function.Supplier;
  */
 public final class JedisLab implements Lab {
 
-    static final int TICKS = 20;
+    static final int OPERATIONS = 20;
 
     @Override
     public void run(Ctx ctx) throws Exception {
         URI uri = URI.create(Env.redisUrl());
-        String ticksKey = ctx.k("maint", "ticks");
+        String operationsKey = ctx.k("maint", "operations");
         String clientsKey = ctx.k("maint", "clients");
 
         ctx.out.step("Jedis 8.0.1 ainda não fala SCH: veja o que o servidor responde sobre o recurso");
@@ -54,8 +54,8 @@ public final class JedisLab implements Lab {
                 sch = "server-only";
             } catch (JedisDataException e) {
                 ctx.out.kv("resposta", e.getMessage());
-                ctx.out.info("Redis Open Source não tem SCH; e o Jedis, hoje, também não negocia. Nada muda no handshake.");
-                sch = "unsupported";
+                ctx.out.info("Não foi possível negociar SCH: confira o erro de suporte ou permissão acima. Jedis 8.0.1 não processa esses avisos.");
+                sch = e.getMessage() != null && e.getMessage().toLowerCase().contains("unknown") ? "unsupported" : "refused";
             }
 
             ctx.out.step("O que o Jedis tem hoje: timeouts, PING nas conexões ociosas e retry");
@@ -63,18 +63,20 @@ public final class JedisLab implements Lab {
             ctx.out.kv("testWhileIdle", "true a cada 5 s: uma conexão morta pela manutenção sai do pool antes de chegar ao jogador");
             ctx.out.info("Durante uma manutenção sem SCH, a conexão cai: o pool descarta a quebrada, o retry refaz o comando.");
 
-            ctx.out.step(TICKS + " comandos com retry: o relógio da raid não pode pular");
-            jedis.unlink(ticksKey);
-            ctx.out.cmd("INCR " + ticksKey + "  (x" + TICKS + ")");
-            long last = 0;
-            for (int i = 0; i < TICKS; i++) {
-                last = withRetry(ctx, 3, 200, () -> jedis.incr(ticksKey));
+            ctx.out.step(OPERATIONS + " operações idempotentes com retry: um ID por operação");
+            jedis.unlink(operationsKey);
+            ctx.out.cmd("SADD " + operationsKey + " op-1 ... op-" + OPERATIONS + "  (um comando por ID)");
+            for (int i = 1; i <= OPERATIONS; i++) {
+                String operationId = "op-" + i;
+                withRetry(ctx, 3, 200, () -> jedis.sadd(operationsKey, operationId));
             }
-            ctx.out.kv("ticks", last);
-            ctx.out.info("Para failover geográfico com circuit breaker, o Jedis tem o MultiDbClient: próxima lição.");
+            long applied = jedis.scard(operationsKey);
+            ctx.out.kv("operações distintas aplicadas", applied);
+            ctx.out.info("Repetir SADD com o mesmo ID não duplica o efeito. Um INCR após resposta perdida poderia incrementar duas vezes.");
+            ctx.out.info("Nenhuma manutenção foi provocada neste lab; estes comandos demonstram a configuração e o retry.");
 
             jedis.hset(clientsKey, ctx.client, Instant.now().toString());
-            ctx.done("ticks", String.valueOf(last), "sch", sch);
+            ctx.done("operations", String.valueOf(applied), "sch", sch, "maintenance_events", "0");
         }
     }
 

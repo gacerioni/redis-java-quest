@@ -1,5 +1,5 @@
 site_name: Redis Java Quest
-site_description: Redis para devs Java, com Jedis e Lettuce lado a lado. Aprenda fazendo, no Ember Realm.
+site_description: Redis para devs Java, com Jedis e Lettuce lado a lado. Workshop guiado de 60 minutos e curso completo de padrões de backend.
 site_url: https://platformengineer.io/redisjava/
 copyright: Redis Java Quest. Conteúdo aberto, código MIT.
 docs_dir: docs
@@ -75,19 +75,19 @@ extra:
 
 nav:
   - Início: index.md
-  - Trilha do workshop (~1h):
+  - Workshop guiado (60 min):
       - trilha/index.md
-      - "01 Setup: do zero ao PONG": trilha/01-setup.md
+      - "Antes: preparo até o PONG": trilha/01-setup.md
       - "02 Conectar e o primeiro SET/GET": trilha/02-conectar.md
       - "03 Chaves que expiram (TTL)": trilha/03-ttl.md
       - "04 String + sua vez": trilha/04-string.md
-      - "05 Hash": trilha/05-hash.md
-      - "06 Sorted Set": trilha/06-sorted-set.md
+      - "Demo: Hash": trilha/05-hash.md
+      - "Demo: Sorted Set": trilha/06-sorted-set.md
       - "07 E agora?": trilha/07-proximos-passos.md
   - Fundamentos:
       - fundamentos/index.md
       - 00 Do zero ao primeiro comando: comece-aqui/index.md
-      - 01 O mapa do mundo: fundamentos/01-mapa-do-mundo.md
+      - 01 Topologias: fundamentos/01-mapa-do-mundo.md
       - 02 Conectar com Jedis e Lettuce: fundamentos/02-conectar.md
       - 03 Redis Insight: fundamentos/03-redis-insight.md
       - 04 Chaves, TTL e SCAN: fundamentos/04-chaves-ttl-scan.md

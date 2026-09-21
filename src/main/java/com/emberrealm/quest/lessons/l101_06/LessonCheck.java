@@ -42,8 +42,8 @@ public final class LessonCheck implements Check {
             boolean ranJedis = marker.containsKey("ran_jedis");
             boolean ranLettuce = marker.containsKey("ran_lettuce");
             if (ranJedis && ranLettuce) v.pass("os dois clients rodaram a lição: mesma história, mesmas chaves");
-            else if (ranJedis) v.skip("falta experimentar com o Lettuce: ./quest run 101-06 lettuce");
-            else if (ranLettuce) v.skip("falta experimentar com o Jedis: ./quest run 101-06 jedis");
+            else if (ranJedis) v.info("Opcional: experimente com o Lettuce: ./quest run 101-06 lettuce");
+            else if (ranLettuce) v.info("Opcional: experimente com o Jedis: ./quest run 101-06 jedis");
         }
     }
 }

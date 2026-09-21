@@ -9,93 +9,89 @@ kind: lab
 
 <p class="lesson-meta">Lição 301-04 · Lab · 8 min</p>
 
-O Redis Cloud atualiza versão e move nós por baixo do seu banco sem pedir licença. Smart client handoffs (SCH) é o servidor avisando o client, segundos antes, que um shard vai se mover: o client relaxa o timeout durante a manutenção e reconecta no endpoint novo antes do corte. O Lettuce 7 faz isso sozinho em RESP3; o Jedis 8.0.1 ainda não — a lição mostra o que ele oferece no lugar.
+Durante uma manutenção, Redis Cloud e Redis Software podem avisar o client antes de mover uma conexão. **Smart client handoffs (SCH)** permite relaxar timeouts e, onde suportado, reconectar ao novo endpoint antes do corte. Na versão do curso, Lettuce 7.7 oferece esse suporte em RESP3; Jedis 8.0.1 ainda não.
 
-## O que o lab faz
-
-- Configurar o Lettuce com `MaintNotificationsConfig.enabled()` e timeouts relaxados de 10 s
-- Mandar `CLIENT MAINT_NOTIFICATIONS ON` à mão e ler a resposta do servidor (o Redis local não conhece o recurso)
-- Rodar 20 `INCR` assíncronos em `quest:maint:ticks` com a configuração de produção
-- No Jedis, rodar os mesmos 20 comandos com retry e health check do pool
+O lab verifica a configuração e executa **20 operações idempotentes**. Só há evidência de uma manutenção real quando os avisos aparecem durante a execução. Receber `OK` no pedido de notificações, sozinho, comprova a negociação, não um handoff ocorrido.
 
 ## Faça agora
 
 ```bash
-./quest run 301-04 jedis
-./quest run 301-04 lettuce    # opcional: mesmo lab, outro client
+./quest run 301-04 lettuce
+./quest run 301-04 jedis    # comparação: pool + repetição segura, sem SCH nesta versão
 ./quest verify 301-04
 ```
 
-## O código
+No Redis Open Source, o pedido pode ser recusado por falta de suporte. Uma recusa também pode indicar permissão: leia a resposta antes de inferir qual produto está do outro lado. O lab ainda demonstra a parte de operações idempotentes.
+
+## Por que SADD em vez de repetir INCR?
+
+Se o servidor aplicou uma escrita mas a resposta se perdeu, repetir `INCR` incrementaria novamente. Aqui cada operação tem um ID fixo: `SADD quest:maint:operations op-1`, até `op-20`. Repetir o mesmo ID mantém um único membro. `SCARD` deve resultar em 20.
+
+Isso demonstra uma operação naturalmente idempotente, não uma implementação universal de deduplicação de pagamentos ou de outros efeitos externos.
 
 === "Jedis"
 
     ```java
-    // Jedis 8.0.1 does not negotiate SCH; ask the server about it and move on
-    try {
-        jedis.sendCommand(Protocol.Command.CLIENT, "MAINT_NOTIFICATIONS", "OFF");
-    } catch (JedisDataException e) {
-        // Redis Open Source: ERR unknown subcommand 'MAINT_NOTIFICATIONS'
-    }
-
     ConnectionPoolConfig pool = new ConnectionPoolConfig();
     pool.setMaxTotal(8);
-    pool.setTestWhileIdle(true);                       // a connection killed by maintenance leaves the pool
+    pool.setTestWhileIdle(true);
     pool.setTimeBetweenEvictionRuns(Duration.ofSeconds(5));
 
-    for (int i = 0; i < 20; i++) {
-        withRetry(3, 200, () -> jedis.incr(ticksKey)); // JedisConnectionException: retry with backoff
+    for (int i = 1; i <= 20; i++) {
+        String operationId = "op-" + i;
+        withRetry(3, 200, () -> jedis.sadd(operationsKey, operationId));
     }
+    long applied = jedis.scard(operationsKey);   // 20 distinct IDs
     ```
+
+    O lab limita timeouts e o pool e repete somente essa operação segura. Reutilizar um pool não elimina a necessidade de tratar resultado desconhecido após uma falha de rede.
 
 === "Lettuce"
 
     ```java
     ClientOptions options = ClientOptions.builder()
-            .protocolVersion(ProtocolVersion.RESP3)                        // SCH needs RESP3 (the default)
-            .maintNotificationsConfig(MaintNotificationsConfig.enabled())  // also the default since 7.0
+            .protocolVersion(ProtocolVersion.RESP3)
+            .maintNotificationsConfig(MaintNotificationsConfig.enabled())
             .timeoutOptions(TimeoutOptions.builder()
                     .timeoutCommands(true)
-                    .fixedTimeout(Duration.ofSeconds(2))                       // normal command timeout
-                    .relaxedTimeoutsDuringMaintenance(Duration.ofSeconds(10))  // while a shard moves
+                    .fixedTimeout(Duration.ofSeconds(2))
+                    .relaxedTimeoutsDuringMaintenance(Duration.ofSeconds(10))
                     .build())
             .build();
 
     RedisClient client = RedisClient.create(uri);
     client.setOptions(options);
     try (StatefulRedisConnection<String, String> connection = client.connect()) {
-        connection.addListener(message -> {                            // MOVING, MIGRATING, MIGRATED...
-            System.out.println("maintenance: " + message.getType());
-        });
-
-        RedisAsyncCommands<String, String> async = connection.async(); // relaxed timeouts apply to async and reactive
-        RedisFuture<Long> last = null;
-        for (int i = 0; i < 20; i++) last = async.incr(ticksKey);
-        last.get(2, TimeUnit.SECONDS);                                 // same connection, same order
+        connection.addListener(message ->
+                System.out.println("maintenance: " + message.getType()));
+        RedisAsyncCommands<String, String> async = connection.async();
+        List<CompletableFuture<Long>> pending = new ArrayList<>();
+        for (int i = 1; i <= 20; i++) {
+            pending.add(async.sadd(operationsKey, "op-" + i).toCompletableFuture());
+        }
+        CompletableFuture.allOf(pending.toArray(CompletableFuture[]::new))
+                .get(12, TimeUnit.SECONDS);
+    } finally {
+        client.shutdown();
     }
     ```
 
+    A espera externa de 12 segundos ultrapassa os 10 segundos do timeout relaxado. Uma espera externa de 2 segundos interromperia a aplicação antes do mecanismo que acabamos de configurar. O lab limpa o set antes da rodada para permitir repetição da demonstração.
+
 ## No Redis Insight
 
-No Browser, `quest:maint:ticks` termina em 20 depois de cada client (o lab zera a chave antes de começar) e `quest:maint:clients` registra quem rodou. No Profiler, as duas versões mandam 20 `INCR`; a do Lettuce chega em rajada, porque a API assíncrona não espera resposta entre um comando e outro. No Workbench, `CLIENT MAINT_NOTIFICATIONS ON` devolve o mesmo erro que o lab mostra: o Redis Open Source local não conhece o subcomando.
+No Browser, `quest:maint:operations` termina com 20 membros e `quest:maint:clients` registra os clients usados. No Profiler aparecem os `SADD`s; no Lettuce eles saem sem esperar cada resposta individualmente. O marcador da lição também registra a resposta da negociação e quantos avisos de manutenção foram observados.
 
-??? note "Por dentro"
-
-    | Comando | O que faz |
-    |---|---|
-    | `HELLO 3` | RESP3 no handshake, pré-requisito do SCH: os avisos chegam como mensagens push |
-    | `CLIENT MAINT_NOTIFICATIONS ON` | Pede os avisos de manutenção; o Lettuce manda sozinho ao conectar e ignora a recusa de servidores sem SCH |
-    | `MIGRATING` / `MIGRATED` (push) | O shard vai se mover e terminou de se mover: o client relaxa e depois restaura o timeout |
-    | `MOVING` (push) | Traz o endpoint novo: o client conecta lá, transfere a fila e fecha a conexão antiga (pre-handoff) |
-    | `FAILING_OVER` / `FAILED_OVER` (push) | Uma réplica está assumindo: mesma dança dos timeouts |
-    | `INCR quest:maint:ticks` | O comando de negócio que não pode pular durante a manutenção |
+| Sinal | O que demonstra |
+|---|---|
+| `SCARD ... = 20` | Os 20 IDs distintos foram aplicados |
+| `CLIENT MAINT_NOTIFICATIONS ON` aceito | O servidor aceitou enviar avisos nesta conexão |
+| `MIGRATING` / `MIGRATED` | Avisos de início e fim de migração |
+| `MOVING` | Aviso com novo endpoint para o handoff |
+| Nenhum aviso durante o lab | Não foi observada manutenção nessa execução |
 
 ??? tip "Em produção"
-
-    - SCH é recurso do Redis Cloud e do Redis Software. No Redis Cloud vem ligado por padrão, com timeouts relaxados e pre-handoffs; sobre AWS PrivateLink e Google Cloud Private Service Connect só os timeouts relaxados valem (sem pre-handoff), e aí configure `endpointType(EndpointType.NONE)`. No Redis Software (8.0.2+) ative `client_maint_notifications` pela API REST do cluster.
-    - Precisa de RESP3 e vale para conexões normais: conexões bloqueantes (`BLPOP`, `XREAD BLOCK`) e pub/sub não recebem handoff e continuam dependendo do `autoReconnect` ([lição 102-04](../102-eventos/04-conexoes-bloqueantes.md)). Os timeouts relaxados valem só nas APIs async e reactive do Lettuce. Um client configurado para failover geográfico ([lição 301-05](05-active-active.md)) desliga o SCH por enquanto.
-    - Lettuce 7.0+ suporta SCH; Jedis 8.0.1 ainda não. Com Jedis, fique com timeouts curtos, `testWhileIdle` e retry para erros de conexão: a manutenção derruba a conexão, o pool descarta a quebrada e o retry refaz o comando.
-
-??? tip "Desafio"
-
-    Aponte `REDIS_URL` para um banco do Redis Cloud em versão recente e rode a versão Lettuce: `CLIENT MAINT_NOTIFICATIONS ON` responde `OK` e o marcador fica com `sch=on`. Se o banco passar por uma manutenção enquanto você roda um loop mais longo, o listener imprime `MIGRATING` e `MOVING` no console.
+    - SCH exige suporte do servidor e do client e RESP3. No Cloud, o suporte depende também do tipo de endpoint; PrivateLink e Private Service Connect não usam pre-handoff como um endpoint público. No Software, a configuração do cluster deve habilitar os avisos.
+    - Timeouts relaxados do Lettuce valem nas APIs async/reactive. Conexões bloqueantes e Pub/Sub ficam fora desse mecanismo; use conexão dedicada e recuperação apropriada.
+    - O modo de failover geográfico do client desabilita SCH nesta versão. Trate os dois recursos como configurações diferentes e consulte as [notificações de manutenção do Lettuce](https://redis.io/docs/latest/develop/clients/lettuce/connect/).
+    - Mesmo com SCH, mantenha operações repetíveis ou trate explicitamente o resultado desconhecido. O suporte do client reduz o impacto da manutenção; não garante entrega exatamente uma vez.

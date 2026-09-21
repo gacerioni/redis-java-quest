@@ -49,9 +49,9 @@ public final class LettuceLab implements Lab {
 
             ctx.out.step("TTL tem dois valores especiais");
             ctx.out.cmd("TTL " + ctx.k("player", "kaelith"));
-            ctx.out.kv("TTL da ficha", redis.ttl(ctx.k("player", "kaelith")) + " (-1: a chave existe e nunca expira)");
+            ctx.out.kv("TTL da ficha", JedisLab.describeTtl(redis.ttl(ctx.k("player", "kaelith"))));
             ctx.out.cmd("TTL " + ctx.k("session", "inexistente"));
-            ctx.out.kv("TTL de chave inexistente", redis.ttl(ctx.k("session", "inexistente")) + " (-2: não existe)");
+            ctx.out.kv("TTL da chave de exemplo", JedisLab.describeTtl(redis.ttl(ctx.k("session", "inexistente"))));
 
             ctx.out.step("Kaelith continua jogando: EXPIRE renova o prazo (sliding expiration)");
             ctx.out.cmd("EXPIRE " + session + " 3600");

@@ -9,7 +9,7 @@ kind: lab
 
 <p class="lesson-meta">Lição 101-03 · Lab · 8 min</p>
 
-Uma fila em que a ordem de chegada importa é uma List: sequência ordenada em que inserir e remover nas pontas custa O(1), não importa o tamanho. `RPUSH` coloca quem chegou no fim, `LPOP` entrega a quem espera há mais tempo. E `BRPOP` deixa um worker esperando trabalho sem polling — ao custo de prender uma conexão enquanto espera, tema de [Conexões bloqueantes](../102-eventos/04-conexoes-bloqueantes.md).
+Uma fila em que a ordem de chegada importa é uma List: sequência ordenada em que inserir e remover nas pontas custa O(1), não importa o tamanho. `RPUSH` coloca quem chegou no fim, `LPOP` entrega a quem espera há mais tempo. E `BRPOP` deixa um worker esperando trabalho sem polling; ao custo de prender uma conexão enquanto espera, tema de [Conexões bloqueantes](../102-eventos/04-conexoes-bloqueantes.md).
 
 ## O que o lab faz
 

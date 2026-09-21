@@ -7,7 +7,6 @@ import io.lettuce.core.ClientOptions;
 import io.lettuce.core.MaintNotificationsConfig;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisCommandExecutionException;
-import io.lettuce.core.RedisFuture;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.TimeoutOptions;
 import io.lettuce.core.api.StatefulRedisConnection;
@@ -22,6 +21,10 @@ import io.lettuce.core.protocol.ProtocolVersion;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -35,7 +38,7 @@ public final class LettuceLab implements Lab {
 
     @Override
     public void run(Ctx ctx) throws Exception {
-        String ticksKey = ctx.k("maint", "ticks");
+        String operationsKey = ctx.k("maint", "operations");
         String clientsKey = ctx.k("maint", "clients");
 
         ctx.out.step("ClientOptions: notificações de manutenção + timeouts relaxados");
@@ -57,8 +60,10 @@ public final class LettuceLab implements Lab {
         RedisClient client = RedisClient.create(uri);
         client.setOptions(options);
         try (StatefulRedisConnection<String, String> connection = client.connect()) {
+            AtomicInteger maintenanceEvents = new AtomicInteger();
             connection.addListener(message -> {
                 if (MAINT_PUSH_TYPES.contains(message.getType())) {
+                    maintenanceEvents.incrementAndGet();
                     ctx.out.warn("aviso de manutenção do servidor: " + message.getType() + " " + message.getContent());
                 }
             });
@@ -75,25 +80,30 @@ public final class LettuceLab implements Lab {
                 sch = "on";
             } catch (RedisCommandExecutionException e) {
                 ctx.out.kv("resposta", e.getMessage());
-                ctx.out.info("Redis Open Source não tem SCH. O Lettuce recebeu a mesma recusa no handshake, ignorou e conectou normalmente.");
+                ctx.out.info("O pedido não foi aceito; pode ser falta de suporte ou permissão. Confira a resposta antes de concluir qual é o produto.");
                 sch = e.getMessage() != null && e.getMessage().toLowerCase().contains("unknown") ? "unsupported" : "refused";
             }
 
-            ctx.out.step(JedisLab.TICKS + " INCRs assíncronos: o relógio da raid não pode pular");
+            ctx.out.step(JedisLab.OPERATIONS + " SADDs assíncronos: um ID fixo por operação");
             RedisAsyncCommands<String, String> async = connection.async();
-            async.unlink(ticksKey).get(2, TimeUnit.SECONDS);
-            ctx.out.cmd("INCR " + ticksKey + "  (x" + JedisLab.TICKS + ", async)");
-            RedisFuture<Long> last = null;
-            for (int i = 0; i < JedisLab.TICKS; i++) {
-                last = async.incr(ticksKey);
+            async.unlink(operationsKey).get(12, TimeUnit.SECONDS);
+            ctx.out.cmd("SADD " + operationsKey + " op-1 ... op-" + JedisLab.OPERATIONS + "  (async, um comando por ID)");
+            List<CompletableFuture<Long>> pending = new ArrayList<>();
+            for (int i = 1; i <= JedisLab.OPERATIONS; i++) {
+                pending.add(async.sadd(operationsKey, "op-" + i).toCompletableFuture());
             }
-            Long ticks = last.get(2, TimeUnit.SECONDS);   // same connection, same order: the last reply means all replied
-            ctx.out.kv("ticks", ticks);
-            ctx.out.info("Em uma manutenção real do Redis Cloud, esses INCRs esperariam até 10 s em vez de 2 s, e nenhum seria perdido no handoff.");
+            // The outer wait must exceed SCH's 10-second relaxed command timeout.
+            CompletableFuture.allOf(pending.toArray(CompletableFuture[]::new)).get(12, TimeUnit.SECONDS);
+            Long applied = async.scard(operationsKey).get(12, TimeUnit.SECONDS);
+            ctx.out.kv("operações distintas aplicadas", applied);
+            ctx.out.info("Replay de SADD com o mesmo ID é idempotente. Uma resposta perdida não cria um segundo efeito.");
+            ctx.out.kv("avisos de manutenção observados", maintenanceEvents.get());
+            ctx.out.info("Sem aviso observado, validamos a configuração e os comandos, não um handoff real.");
             ctx.out.info("SCH não cobre conexões bloqueantes (BLPOP, pub/sub): essas dependem do autoReconnect.");
 
-            sync.hset(clientsKey, ctx.client, Instant.now().toString());
-            ctx.done("ticks", String.valueOf(ticks), "sch", sch);
+            async.hset(clientsKey, ctx.client, Instant.now().toString()).get(12, TimeUnit.SECONDS);
+            ctx.done("operations", String.valueOf(applied), "sch", sch,
+                    "maintenance_events", String.valueOf(maintenanceEvents.get()));
         } finally {
             client.shutdown(Duration.ZERO, Duration.ofSeconds(2));
         }

@@ -9,7 +9,7 @@ kind: lab
 
 <p class="lesson-meta">Lição 102-01 · Lab · 8 min</p>
 
-`PUBLISH` entrega a mensagem para quem estiver assinando o canal naquele instante e não guarda nada: é a ferramenta certa para avisos ao vivo (chat, presença, invalidação de cache) e a errada para qualquer coisa que não pode se perder. O lab mostra os dois lados — uma mensagem perdida de propósito e cinco entregues.
+`PUBLISH` entrega a mensagem para quem estiver assinando o canal naquele instante e não guarda nada: é a ferramenta certa para avisos ao vivo (chat, presença, invalidação de cache) e a errada para qualquer coisa que não pode se perder. O lab mostra os dois lados; uma mensagem perdida de propósito e cinco entregues.
 
 ## O que o lab faz
 

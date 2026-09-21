@@ -4,6 +4,7 @@ import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
 
 import java.time.Duration;
+import java.security.Security;
 
 /**
  * Connection factories used by every lesson. Two clients, same URL:
@@ -15,6 +16,12 @@ public final class Clients {
     private static volatile io.lettuce.core.RedisClient lettuce;
 
     private Clients() {
+    }
+
+    /** Call at process startup, before any hostname resolution. Tune this policy for your application. */
+    public static void configureDnsCaching() {
+        Security.setProperty("networkaddress.cache.ttl", "0");
+        Security.setProperty("networkaddress.cache.negative.ttl", "0");
     }
 
     /** A Jedis client for the configured REDIS_URL. Close it when done. */

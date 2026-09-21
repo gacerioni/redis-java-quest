@@ -44,13 +44,13 @@
     box.innerHTML = "";
     var stateEl = document.createElement("div");
     stateEl.className = "state" + (done ? " done" : "");
-    stateEl.textContent = done ? "Lição concluída em " + formatDate(done)
-      : (box.getAttribute("data-state-text") || "Rodou as duas versões e o check passou? Marque como concluída.");
+    stateEl.textContent = done ? "Estudo registrado em " + formatDate(done)
+      : (box.getAttribute("data-state-text") || "Registre seu estudo nesta página. A verificação do lab é feita separadamente com ./quest verify.");
     var actions = document.createElement("div");
     actions.className = "actions";
     var btn = document.createElement("button");
     btn.className = "quest-btn" + (done ? " secondary" : "");
-    btn.textContent = done ? "Desmarcar" : "Marcar como concluída";
+    btn.textContent = done ? "Desmarcar estudo" : "Registrar estudo";
     btn.addEventListener("click", function () {
       var s = load();
       if (s.done[id]) delete s.done[id]; else s.done[id] = new Date().toISOString();
@@ -92,7 +92,7 @@
       if (!badge) return;
       badge.classList.remove("progress", "done");
       if (done === lessons.length && lessons.length > 0 && quiz && quiz.passed) {
-        badge.textContent = "Concluído"; badge.classList.add("done");
+        badge.textContent = "Estudado"; badge.classList.add("done");
       } else if (done > 0) {
         badge.textContent = done + " de " + lessons.length; badge.classList.add("progress");
       } else {
@@ -111,7 +111,10 @@
     var banner = document.querySelector("[data-quest-prereq]");
     if (!banner) return;
     var link = banner.querySelector("[data-quest-setup-link]");
-    if (link) link.href = urlOf("comece-aqui/");
+    if (link) {
+      link.href = urlOf(window.location.pathname.indexOf("/trilha/") >= 0 ? "trilha/01-setup/" : "comece-aqui/");
+      link.textContent = "Preparar ambiente antes do workshop";
+    }
     banner.hidden = !!state.done["setup"];
   }
 

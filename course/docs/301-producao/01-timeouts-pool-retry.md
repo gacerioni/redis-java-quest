@@ -9,7 +9,7 @@ kind: lab
 
 <p class="lesson-meta">Lição 301-01 · Lab · 12 min</p>
 
-Quando o link entre a aplicação e o Redis oscila, threads sem timeout ficam presas esperando uma resposta que não vem, o pool esgota e a aplicação congela. Timeout explícito, pool limitado e retry com backoff são os três cintos de segurança de qualquer client Redis. No Redis Cloud entra um quarto: o failover troca o IP por trás do mesmo nome, então o cache de DNS da JVM precisa estar desligado.
+Quando o link entre a aplicação e o Redis oscila, threads sem timeout ficam presas esperando uma resposta que não vem, o pool esgota e a aplicação congela. Timeout explícito, pool limitado e repetição apenas de operações seguras ajudam a limitar o impacto da falha. No Redis Cloud, um failover pode mudar o IP atrás do nome. A política de DNS deve estar aplicada antes da primeira resolução; o ponto de entrada `Main` faz isso no curso.
 
 ## O que o lab faz
 
@@ -32,6 +32,10 @@ Quando o link entre a aplicação e o Redis oscila, threads sem timeout ficam pr
 === "Jedis"
 
     ```java
+    // Applied at application startup, before creating any client:
+    Security.setProperty("networkaddress.cache.ttl", "0");
+    Security.setProperty("networkaddress.cache.negative.ttl", "0");
+
     DefaultJedisClientConfig config = DefaultJedisClientConfig.builder()
             .connectionTimeoutMillis(2000)   // max time to open the TCP connection
             .socketTimeoutMillis(2000)       // max time waiting for a reply
@@ -60,13 +64,14 @@ Quando o link entre a aplicação e o Redis oscila, threads sem timeout ficam pr
         phantom.ping();   // JedisConnectionException after about 500 ms
     }
 
-    Security.setProperty("networkaddress.cache.ttl", "0");
-    Security.setProperty("networkaddress.cache.negative.ttl", "0");
     ```
 
 === "Lettuce"
 
     ```java
+    // Applied before any DNS lookup/client creation:
+    Security.setProperty("networkaddress.cache.ttl", "0");
+    Security.setProperty("networkaddress.cache.negative.ttl", "0");
     RedisURI uri = RedisURI.create(url);
     uri.setTimeout(Duration.ofSeconds(2));                    // command timeout (sync API)
 
@@ -97,7 +102,6 @@ Quando o link entre a aplicação e o Redis oscila, threads sem timeout ficam pr
             .build());
     phantom.connect();                                        // RedisConnectionException after about 500 ms
 
-    Security.setProperty("networkaddress.cache.ttl", "0");
     ```
 
 ## No Redis Insight
@@ -124,8 +128,8 @@ No Browser, filtre pelo seu prefixo: `quest:boss:spawn` é a STRING com o instan
 ??? tip "Em produção"
 
     - Dimensione o pool pela concorrência real mais os comandos bloqueantes ([lição 102-04](../102-eventos/04-conexoes-bloqueantes.md)). O plano free aceita 30 conexões, então `maxTotal` 8 por instância da aplicação já é generoso. `maxWait` curto: melhor um erro em 1 s do que uma fila que só cresce.
-    - Retry só para erro de conexão e timeout, com backoff exponencial e um teto de tentativas. `INCR` e `LPUSH` não são idempotentes: no Jedis, não repita; no Lettuce, marque no `replayFilter`.
-    - `networkaddress.cache.ttl=0` antes da primeira resolução de nome (ou `-Dsun.net.inetaddr.ttl=0` na JVM). Sem isso, um failover do Redis Cloud deixa sua aplicação batendo no IP antigo até o cache expirar.
+    - Uma falha de conexão ou timeout pode ocorrer **depois** de o servidor aplicar a escrita. Use retry limitado e backoff apenas se repetir a operação for seguro. No exemplo, repetir `SET` com o mesmo valor é idempotente. `INCR` e `LPUSH` não são: não aplique retry genérico. No Lettuce, `replayFilter` controla o reenvio automático; filtre todas as operações relevantes ao workload, não apenas o `INCR` demonstrado.
+    - O curso aplica `networkaddress.cache.ttl=0` e a política de cache negativo no início de `Main`, antes de criar clients. Alterar a propriedade depois de uma resolução não limpa automaticamente entradas já armazenadas. Em produção, alinhe a política ao mecanismo de DNS e failover do serviço.
 
 ??? tip "Desafio"
 

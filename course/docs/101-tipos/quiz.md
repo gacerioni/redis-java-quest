@@ -5,7 +5,7 @@ course: "101"
 
 # Knowledge check: Tipos
 
-Cinco perguntas rápidas. Acerte quatro para fechar o curso.
+Cinco perguntas rápidas. Acerte quatro para concluir este knowledge check; os labs têm verificações separadas.
 
 <div class="quest-quiz" data-course="101"></div>
 

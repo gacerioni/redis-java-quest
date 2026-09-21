@@ -18,8 +18,8 @@ public final class LessonCheck implements Check {
             boolean jedisRan = jedis.exists(ctx.k("hello", "jedis"));
             boolean lettuceRan = jedis.exists(ctx.k("hello", "lettuce"));
             v.expect(jedisRan || lettuceRan, "pelo menos um client conectou e escreveu", "rode a lição com jedis ou lettuce");
-            if (jedisRan && !lettuceRan) v.skip("falta experimentar com o Lettuce: ./quest run 100-02 lettuce");
-            if (lettuceRan && !jedisRan) v.skip("falta experimentar com o Jedis: ./quest run 100-02 jedis");
+            if (jedisRan && !lettuceRan) v.info("Opcional: experimente com o Lettuce: ./quest run 100-02 lettuce");
+            if (lettuceRan && !jedisRan) v.info("Opcional: experimente com o Jedis: ./quest run 100-02 jedis");
             if (jedisRan && lettuceRan) v.pass("os dois clients conectaram, mesma URL, mesmo resultado");
         }
     }

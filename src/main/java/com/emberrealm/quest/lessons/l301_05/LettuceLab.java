@@ -32,6 +32,7 @@ public final class LettuceLab implements Lab {
 
     @Override
     public void run(Ctx ctx) throws Exception {
+        ctx.begin();
         // the failover package logs full stack traces for a region that is down; the lab reports switches itself
         System.setProperty("org.slf4j.simpleLogger.log.io.lettuce.core.failover", "off");
         String eastUrl = Env.get("QUEST_EAST_URL", JedisLab.DEFAULT_EAST);
@@ -52,7 +53,7 @@ public final class LettuceLab implements Lab {
         if (!eastUp && !westUp) {
             ctx.out.warn("Nenhum datacenter responde. Suba os dois: docker compose --profile failover up -d");
             ctx.out.hint("Ou aponte QUEST_EAST_URL e QUEST_WEST_URL para dois bancos seus (duas réplicas Active-Active, por exemplo).");
-            ctx.done("failover", "skipped");
+            ctx.unavailable("heartbeat", "skipped", "failover", "not_observed", "failback", "not_observed");
             return;
         }
         if (!eastUp || !westUp) ctx.out.warn("Um dos datacenters está fora; o MultiDbClient começa pelo que está de pé.");
@@ -81,6 +82,8 @@ public final class LettuceLab implements Lab {
         ctx.out.kv("failback", "confere o east a cada 1 s, com carência de 2 s");
 
         AtomicInteger switches = new AtomicInteger();
+        FailoverEvidence evidence = new FailoverEvidence(label(east), label(west));
+        int beats = JedisLab.beats();
         MultiDbClient client = MultiDbClient.create(List.of(eastDb, westDb), options);
         Disposable events = client.getResources().eventBus().get()
                 .filter(event -> event instanceof DatabaseSwitchEvent)
@@ -93,22 +96,24 @@ public final class LettuceLab implements Lab {
         try (StatefulRedisMultiDbConnection<String, String> connection = client.connect()) {
             ctx.out.kv("ativo no início", label(connection.getCurrentEndpoint()));
 
-            ctx.out.step("Heartbeat: SET " + heartbeat + " a cada 500 ms por 6 s. Derrube o east em outro terminal e veja a troca");
-            ctx.out.cmd("SET " + heartbeat + " <instante>  (x" + JedisLab.BEATS + ")");
+            ctx.out.step("Heartbeat: SET " + heartbeat + " a cada 500 ms por " + JedisLab.seconds() + " s. Derrube e restaure o east em outro terminal e veja a troca");
+            ctx.out.cmd("SET " + heartbeat + " <instante>  (x" + beats + ")");
             int ok = 0;
             int failed = 0;
             String active = "?";
-            for (int i = 1; i <= JedisLab.BEATS; i++) {
+            for (int i = 1; i <= beats; i++) {
                 try {
+                    String before = label(connection.getCurrentEndpoint());
                     connection.sync().set(heartbeat, Instant.now().toString());
                     active = label(connection.getCurrentEndpoint());
+                    if (before.equals(active)) evidence.observe(active);
                     ok++;
                     ctx.out.info(String.format("batida %2d -> %s", i, active));
                 } catch (RedisException e) {
                     failed++;
                     ctx.out.warn(String.format("batida %2d falhou: %s", i, JedisLab.firstLine(e.getMessage())));
                 }
-                if (i < JedisLab.BEATS) Thread.sleep(JedisLab.BEAT_MS);
+                if (i < beats) Thread.sleep(JedisLab.BEAT_MS);
             }
             ctx.out.kv("east saudável", health(connection, east));
             ctx.out.kv("west saudável", health(connection, west));
@@ -117,11 +122,7 @@ public final class LettuceLab implements Lab {
             try (redis.clients.jedis.RedisClient home = Clients.jedis()) {
                 home.hset(ctx.k("aa", "clients"), ctx.client, Instant.now().toString());
             }
-            ctx.done("failover", "ok",
-                    "beats_ok", String.valueOf(ok),
-                    "beats_failed", String.valueOf(failed),
-                    "switches", String.valueOf(switches.get()),
-                    "active", active);
+            JedisLab.recordOutcome(ctx, ok, failed, switches.get(), active, evidence);
         } finally {
             events.dispose();
             client.shutdown(Duration.ZERO, Duration.ofSeconds(2));

@@ -9,7 +9,7 @@ kind: lab
 
 <p class="lesson-meta">Lição 201-03 · Lab · 12 min</p>
 
-"Uma arma para mago iniciante": texto puro (`@type:{arma}`) devolve as 15 armas sem saber qual responde à pergunta; busca vetorial pura (KNN sobre o embedding) entende a intenção, mas devolve um manto porque "parece" com a frase. `FT.HYBRID` (Redis 8.4+) roda as duas buscas no servidor e funde os rankings com RRF — quem vai bem nas duas listas sobe. Os embeddings dos itens já estão no seed e a pergunta vem com o vetor pronto: a lição roda sem modelo instalado.
+"Uma arma para mago iniciante": texto puro (`@type:{arma}`) devolve as 15 armas sem saber qual responde à pergunta; busca vetorial pura (KNN sobre o embedding) entende a intenção, mas devolve um manto porque "parece" com a frase. `FT.HYBRID` (Redis 8.4+) roda as duas buscas no servidor e funde os rankings com RRF; quem vai bem nas duas listas sobe. Os embeddings dos itens já estão no seed e a pergunta vem com o vetor pronto: a lição roda sem modelo instalado.
 
 ## O que o lab faz
 

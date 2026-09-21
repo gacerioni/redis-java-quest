@@ -9,7 +9,7 @@ kind: lab
 
 <p class="lesson-meta">Lição 101-04 · Lab · 8 min</p>
 
-Uma conquista não tem ordem e não se repete: ou o jogador tem, ou não tem. Isso é um Set — coleção de strings únicas, sem ordem, com teste de pertinência em O(1) e operações de conjunto (interseção, diferença, união) rodando no servidor. Dá para cruzar os troféus de dois jogadores e sortear um item de uma tabela de loot, um comando cada.
+Uma conquista não tem ordem e não se repete: ou o jogador tem, ou não tem. Isso é um Set; coleção de strings únicas, sem ordem, com teste de pertinência em O(1) e operações de conjunto (interseção, diferença, união) rodando no servidor. Dá para cruzar os troféus de dois jogadores e sortear um item de uma tabela de loot, um comando cada.
 
 ## O que o lab faz
 

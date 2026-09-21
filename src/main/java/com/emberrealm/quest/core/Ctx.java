@@ -11,6 +11,7 @@ public final class Ctx {
     public final Console out;
     public final String lesson;
     public final String client;
+    private boolean unavailable;
 
     public Ctx(Keys keys, Console out, String lesson, String client) {
         this.keys = keys;
@@ -33,6 +34,13 @@ public final class Ctx {
         return keys.of("exercise", lesson);
     }
 
+    /** Invalidate evidence from a previous successful attempt before a new connection is tried. */
+    public void begin() {
+        try (redis.clients.jedis.RedisClient marker = Clients.jedis()) {
+            marker.hset(progressKey(), Map.of("status", "running", "client", client, "at", Instant.now().toString()));
+        }
+    }
+
     /** Records that the exercise ran, with a few stats the check can read back. Pairs: field, value... */
     public void exerciseDone(String... fieldValuePairs) {
         Map<String, String> fields = new LinkedHashMap<>();
@@ -52,7 +60,22 @@ public final class Ctx {
 
     /** Records that this lesson ran, with a few stats the check can read back. Pairs: field, value, field, value... */
     public void done(String... fieldValuePairs) {
+        record(false, fieldValuePairs);
+    }
+
+    /** Records an attempted lab whose required environment or observation is missing. */
+    public void unavailable(String... fieldValuePairs) {
+        record(true, fieldValuePairs);
+    }
+
+    public boolean isUnavailable() {
+        return unavailable;
+    }
+
+    private void record(boolean unavailable, String... fieldValuePairs) {
+        this.unavailable = unavailable;
         Map<String, String> fields = new LinkedHashMap<>();
+        fields.put("status", unavailable ? "unavailable" : "ran");
         fields.put("client", client);
         fields.put("ran_" + client, "1");
         fields.put("at", Instant.now().toString());
@@ -63,7 +86,8 @@ public final class Ctx {
             marker.hset(progressKey(), fields);
         }
         out.blank();
-        out.ok("Lição " + lesson + " concluída com " + client + ". Marcador: " + progressKey());
+        if (unavailable) out.warn("Lição " + lesson + " parcial/indisponível com " + client + ". Confira os requisitos e rode de novo.");
+        else out.ok("Lab " + lesson + " executado com " + client + ". Valide os resultados com verify.");
         out.info("Confira com: ./quest check " + lesson);
     }
 }

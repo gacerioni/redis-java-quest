@@ -27,6 +27,7 @@ public final class Main {
     }
 
     public static void main(String[] args) {
+        Clients.configureDnsCaching();
         Console out = new Console();
         int code;
         try {
@@ -54,7 +55,7 @@ public final class Main {
                 if (client.equals("both")) {
                     int a = run(out, keys, args[1], "jedis");
                     int b = run(out, keys, args[1], "lettuce");
-                    return a == 0 && b == 0 ? 0 : 1;
+                    return mergeExitCodes(a, b);
                 }
                 return run(out, keys, args[1], client);
             }
@@ -78,7 +79,7 @@ public final class Main {
                     for (Lessons.Lesson l : Lessons.all()) {
                         if (StepEngine.stepsFor(l).isEmpty()) continue;
                         out.h1("verify " + l.id() + " " + l.title());
-                        worst = Math.max(worst, StepEngine.verify(new Ctx(keys, out, l.id(), "steps"), l));
+                        worst = mergeExitCodes(worst, StepEngine.verify(new Ctx(keys, out, l.id(), "steps"), l));
                     }
                     return worst;
                 }
@@ -95,7 +96,7 @@ public final class Main {
             case "next" -> {
                 Optional<Lessons.Lesson> next = StepEngine.nextLesson(keys);
                 if (next.isEmpty()) {
-                    out.ok("Você concluiu todos os passos de todas as lições. Parabéns, aventureiro.");
+                    out.info("Não há passos pendentes: os passos foram verificados ou pulados explicitamente. Veja os detalhes com ./quest list.");
                     return 0;
                 }
                 out.h1(next.get().id() + " " + next.get().title());
@@ -107,7 +108,7 @@ public final class Main {
                 if (client.equals("both")) {
                     int a = exercise(out, keys, args[1], "jedis");
                     int b = exercise(out, keys, args[1], "lettuce");
-                    return a == 0 && b == 0 ? 0 : Math.max(a, b);
+                    return mergeExitCodes(a, b);
                 }
                 return exercise(out, keys, args[1], client);
             }
@@ -140,6 +141,12 @@ public final class Main {
         return 2;
     }
 
+    /** An unavailable optional environment must never hide a failed verification. */
+    static int mergeExitCodes(int first, int second) {
+        if (first == 1 || second == 1) return 1;
+        return Math.max(first, second);
+    }
+
     private static int list(Console out, Keys keys) {
         Map<String, Map<String, String>> stepProgress = new HashMap<>();
         try (redis.clients.jedis.RedisClient jedis = Clients.jedis()) {
@@ -156,15 +163,17 @@ public final class Main {
                 out.step(course);
             }
             int[] c = StepEngine.counts(keys, l, stepProgress.getOrDefault(l.id(), Map.of()));
+            long skipped = stepProgress.getOrDefault(l.id(), Map.of()).values().stream().filter("skipped"::equals).count();
             String mark;
             if (c[1] == 0) mark = "[ ] (em breve)   ";
             else if (c[0] == c[1]) mark = "[x] " + c[0] + "/" + c[1] + " passos";
+            else if (skipped > 0) mark = "[>] " + c[0] + "/" + c[1] + " verificados, " + skipped + " pulados";
             else if (c[0] > 0) mark = "[~] " + c[0] + "/" + c[1] + " passos";
             else mark = "[ ] " + c[0] + "/" + c[1] + " passos";
             out.info(String.format("%-18s %s  %s", mark, l.id(), l.title()));
         }
         out.blank();
-        out.info("[x] todos os passos   [~] em andamento   [ ] não começou.   ./quest next leva ao próximo passo pendente.");
+        out.info("[x] todos verificados   [>] há passos pulados   [~] em andamento   [ ] sem passos verificados.   ./quest next leva ao próximo passo pendente.");
         out.info("Redis: " + Env.redacted(Env.redisUrl()) + "   prefixo: " + keys.prefix());
         return 0;
     }
@@ -244,7 +253,7 @@ public final class Main {
         out.info("Redis: " + Env.redacted(Env.redisUrl()) + "   prefixo: " + keys.prefix());
         Ctx ctx = new Ctx(keys, out, id, client);
         lab.get().run(ctx);
-        return 0;
+        return ctx.isUnavailable() ? 3 : 0;
     }
 
     private static int reset(Console out, Keys keys, boolean confirmed) {
@@ -271,12 +280,6 @@ public final class Main {
     }
 
     private static int progress(Console out, Keys keys) {
-        Map<String, Boolean> done = doneMarkers(keys, "progress");
-        long count = done.values().stream().filter(Boolean::booleanValue).count();
-        out.h1("Progresso: " + count + "/" + Lessons.all().size() + " lições");
-        for (Lessons.Lesson l : Lessons.all()) {
-            if (done.getOrDefault(l.id(), false)) out.ok(l.id() + "  " + l.title());
-        }
-        return 0;
+        return list(out, keys);
     }
 }

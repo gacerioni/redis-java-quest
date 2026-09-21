@@ -1,31 +1,39 @@
 ---
 lesson: setup
-title: "Setup: do zero ao PONG"
+title: "Preparo antes do workshop: do zero ao PONG"
 minutes: 15
 kind: setup
 next_url: trilha/02-conectar/
 next_title: "Conectar e o primeiro SET/GET"
-state_text: "PONG no terminal? Marque como concluído."
+state_text: "PONG no terminal? Registre seu estudo."
 ---
 
-# Setup: do zero ao PONG
+# Preparo antes do workshop: do zero ao PONG
 
-<p class="lesson-meta">Trilha do workshop · Passo 1 de 6 · ~15 min</p>
+<p class="lesson-meta">Antes do workshop · Reserve ~15 min, além dos 60 min ao vivo</p>
 
-Único passo sem código da trilha. No fim dele você tem um Redis de verdade, o projeto rodando e a resposta `PONG` no terminal.
+Faça este preparo antes do encontro. No fim, você tem um Redis, o projeto compilado e `PONG` no terminal. Instalação, download e acesso à rede podem pedir mais tempo. Ainda não é necessário carregar o dataset.
 
 ## Faça agora
 
-**1. Confira o Java** — o curso usa Java 21 ou mais novo:
+**1. Confira o Java.** O curso usa Java 21 ou mais novo:
 
 ```bash
 java -version    # esperado: openjdk version "21..." ou maior
 git --version
 ```
 
-Sem Java 21+? Instale pelo [Adoptium Temurin 21](https://adoptium.net/) (ou `brew install openjdk@21` no macOS, `sdk install java 21-tem` com SDKMAN). Maven não precisa: o projeto traz o wrapper `mvnw`.
+Sem Java 21+? Instale o JDK 21 pelo [Adoptium Temurin](https://adoptium.net/), abra um terminal novo e confira `java -version` novamente. Maven não precisa: o projeto traz o wrapper `mvnw`.
 
-**2. Tenha um Redis** — escolha um:
+**2. Clone o projeto e crie o `.env`:**
+
+```bash
+git clone https://github.com/gacerioni/redis-java-quest.git
+cd redis-java-quest
+cp .env.example .env      # Windows PowerShell: Copy-Item .env.example .env
+```
+
+**3. Tenha um Redis.** Escolha um:
 
 === "Redis Cloud (recomendado)"
 
@@ -41,22 +49,16 @@ Sem Java 21+? Instale pelo [Adoptium Temurin 21](https://adoptium.net/) (ou `bre
 === "Docker local"
 
     ```bash
-    docker compose up -d    # dentro da pasta do projeto (passo 3): sobe Redis 8 + Redis Insight
+    docker compose up -d    # dentro da pasta do projeto: sobe Redis 8 + Redis Insight
     ```
 
     A URL é `redis://localhost:6379`. Tudo funciona igual; dá para migrar para o Cloud depois só trocando a URL.
 
-**3. Clone o projeto e preencha o `.env`:**
+**4. Preencha o `.env`:**
 
-```bash
-git clone https://github.com/gacerioni/redis-java-quest.git
-cd redis-java-quest
-cp .env.example .env      # Windows: Copy-Item .env.example .env
-```
+Abra o `.env` e preencha `REDIS_URL=` com a sua URL do passo 3. O `.env` está no `.gitignore`: a senha não vai para o git.
 
-Abra o `.env` e preencha `REDIS_URL=` com a sua URL do passo 2. O `.env` está no `.gitignore`: a senha não vai para o git.
-
-**4. Rode o doctor:**
+**5. Rode o doctor:**
 
 ```bash
 ./quest doctor            # Windows: .\quest.cmd doctor
@@ -69,15 +71,9 @@ PING: PONG
 RTT médio: 9.12 ms
 ```
 
-**5. Carregue o mundo:**
+**6. Deixe o Redis Insight pronto.** No Redis Cloud: **Launch Redis Insight web** na página do banco. Com Docker: [localhost:5540](http://localhost:5540), adicionando o banco com host `redis` e porta `6379` (nomes dentro da rede do Docker). Conecte ao mesmo banco; o Workbench será usado para alterar e observar dados.
 
-```bash
-./quest seed
-```
-
-Isso grava o Ember Realm no seu Redis: itens em JSON, personagens em hash, ranking em sorted set — tudo sob o prefixo `quest:` (o `doctor` mostra o seu prefixo; com usuário ACL próprio ele é o seu nome de usuário).
-
-**6. (Opcional) Abra o Redis Insight** — no Redis Cloud: **Launch Redis Insight web** na página do banco. Com Docker: [localhost:5540](http://localhost:5540). Filtre por `quest:*` e olhe as chaves que o seed criou. Você vai voltar aqui em todos os passos.
+Pronto: ambiente preparado. O primeiro `SET/GET` vem na [próxima página](02-conectar.md), durante o encontro. Só depois dele carregaremos o dataset com `./quest seed`. Para seguir sozinho, pode continuar agora.
 
 ## Deu errado?
 
@@ -88,4 +84,4 @@ Isso grava o Ember Realm no seu Redis: itens em JSON, personagens em hash, ranki
 | Erro de autenticação / `NOPERM` | Confira a URL completa (usuário, senha, `redis://` vs `rediss://`) |
 | `PONG` funciona, `seed` falha | O banco precisa ser Redis 8 com JSON/Search (o free tier e o Docker do curso são) |
 
-Antes do próximo passo, 2 minutos: [como o `./quest` funciona](index.md#como-o-quest-funciona) — o que `run`, `verify` e `exercise` fazem de diferente.
+Confira a [agenda ao vivo e os comandos essenciais](index.md). Se o preparo ainda não funcionar, acompanhe a demonstração e priorize PONG, SET/GET e TTL; o curso permanece disponível depois.
